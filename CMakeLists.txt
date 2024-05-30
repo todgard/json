@@ -12,7 +12,7 @@ endif()
 project ("json")
 
 # Add source to this project's executable.
-add_executable (json "json.cpp" "json.h" "Value.h" "Object.h")
+add_executable (json "json.cpp" "json.h" "Value.h" )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET json PROPERTY CXX_STANDARD 20)
