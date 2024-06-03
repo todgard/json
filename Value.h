@@ -1,19 +1,22 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
+#include <iostream>
+#include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <variant>
-#include <cassert>
+#include <vector>
+
+#include "jsonfwd.h"
+#include "value_visitor.h"
+
+
+#define COUT(x) (std::cout << x << "\n")
 
 namespace tdg::json
 {
-	class value;
-
-	using object = std::unordered_map<std::string, value>;
-	using array = std::vector<value>;
-
 	class value
 	{
 		enum class constant : std::size_t
@@ -26,10 +29,14 @@ namespace tdg::json
 	public:
 		using value_list = std::initializer_list<value>;
 
-		value() : m_value(object()) {}
+		value() : m_value(object()) { COUT("value default ctor"); }
+		value(const value& other) : m_value(other.m_value) { COUT("value copy ctor"); }
+		value(value&& other) : m_value(std::move(other.m_value)) { COUT("value move ctor"); }
+		~value() { COUT("value dtor"); }
 
 		value(value_list values)
 		{
+			COUT("value initializer_list ctor");
 			assert(values.size() > 0);
 			// check for potential JSON object member
 			if (values.size() == 2u && values.begin()->is_string())
@@ -63,18 +70,19 @@ namespace tdg::json
 			}
 		}
 
-		value(object&& obj) : m_value(std::move(obj)) {}
-		value(array&& arr) : m_value(std::move(arr)) {}
-		value(std::string&& s) : m_value(std::move(s)) {}
-		value(const char* s) : m_value(std::string(s)) {}
+		value(object&& obj) : m_value(std::move(obj)) {COUT("value object&& ctor");}
+		value(array&& arr) : m_value(std::move(arr)) {COUT("value array&& move ctor");}
+		value(std::string&& s) : m_value(std::move(s)) {COUT("value string&& move ctor");}
+		value(const char* s) : m_value(std::string(s)) {COUT("value const char* ctor");}
 		template <std::size_t N>
-		value(const char(&p)[N]) : m_value(std::string(p, N)) {}
+		value(const char(&p)[N]) : m_value(std::string(p, N)) {COUT("value const char&[] ctor");}
 
-		value(std::nullptr_t) : m_value(constant::JSON_NULL) {}
+		value(std::nullptr_t) : m_value(constant::JSON_NULL) {COUT("value nullptr_t ctor");}
 
 		template <typename T>
 		value(T arg) requires std::is_integral_v<T> || std::is_floating_point_v<T>
 		{
+			COUT("value int/bool/double ctor");
 			if constexpr (std::is_same_v<T, bool>)
 			{
 				m_value = (arg ? constant::JSON_TRUE : constant::JSON_FALSE);
@@ -84,11 +92,8 @@ namespace tdg::json
 				m_value = arg;
 			}
 		}
-		//value(int64_t i) : m_value(i) {}
-		//value(double d) : m_value(d) {}
-		//value(bool b) : m_value(b ? constant::JSON_TRUE : constant::JSON_FALSE) {}
 
-		value(constant c) : m_value(c) {}
+		value(constant c) : m_value(c) {COUT("value constant ctor");}
 
 		constexpr bool is_object() const
 		{
@@ -130,7 +135,45 @@ namespace tdg::json
 			return m_value.index() == 6 && std::get<constant>(m_value) != constant::JSON_NULL;
 		}
 
+		void accept(const value_visitor& visitor) const
+		{
+			switch (m_value.index())
+			{
+			case 0:
+				visitor.visit(std::get<object>(m_value));
+				break;
+			case 1:
+				visitor.visit(std::get<array>(m_value));
+				break;
+			case 2:
+				visitor.visit(std::get<std::string>(m_value));
+				break;
+			case 3:
+				visitor.visit(std::get<uint64_t>(m_value));
+				break;
+			case 4:
+				visitor.visit(std::get<int64_t>(m_value));
+				break;
+			case 5:
+				visitor.visit(std::get<double>(m_value));
+				break;
+			case 6:
+				if (auto c = std::get<constant>(m_value); c == constant::JSON_NULL)
+				{
+					visitor.visit(nullptr);
+				}
+				else
+				{
+					visitor.visit(c == constant::JSON_TRUE);
+				}
+				break;
+			default:
+				break;
+			}
+		}
+
 	private:
+
 		std::variant<object, array, std::string, uint64_t, int64_t, double, constant> m_value;
 	};
 }
