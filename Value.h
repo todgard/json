@@ -13,7 +13,7 @@
 #include "value_visitor.h"
 
 
-#define COUT(x) (std::cout << x << "\n")
+#define COUT(x) (std::cout << x << '\n')
 
 namespace tdg::json
 {

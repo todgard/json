@@ -12,7 +12,7 @@ int main()
 	using array = tdg::json::array;
 	using object = tdg::json::object;
 
-	value v{ "abc", 2.000001, 3, true };
+	value v{ "abc", 2.0, 3, true };
 	COUT("After v creation");
 	value v2{ array{"abc", true}, {"xzy", 2} };
 
@@ -20,7 +20,7 @@ int main()
 	value v3{ char_arr, nullptr };
 	value v4{ {"abc", array{2}}, {"xyz", -2} };
 
-	tdg::json::printer p(std::cout);
+	tdg::json::printer<std::fixed, 9> p(std::cout);
 
 	p.print(v);
 	std::cout << std::endl;

@@ -1,11 +1,18 @@
 #pragma once
 
+#include <iomanip>
 #include <ostream>
+
 #include "value.h"
 #include "value_visitor.h"
 
+
 namespace tdg::json
 {
+	template <
+		std::ios_base& float_format(std::ios_base&) = std::fixed,
+		std::size_t precision = 6u
+		>
 	class printer : public value_visitor
 	{
 	public:
@@ -13,7 +20,19 @@ namespace tdg::json
 
 		void print(const value& start_value)
 		{
+			auto current_precision = m_out.precision();
+
+			if (current_precision != precision)
+			{
+				m_out << std::setprecision(precision);
+			}
+
 			start_value.accept(*this);
+
+			if (current_precision != precision)
+			{
+				m_out << std::setprecision(current_precision);
+			}
 		}
 
 		virtual void visit(const std::string& s) const
@@ -33,7 +52,7 @@ namespace tdg::json
 
 		virtual void visit(double d) const
 		{
-			m_out << std::fixed << d;
+			m_out << float_format << d;
 		}
 		
 		virtual void visit(bool b) const
