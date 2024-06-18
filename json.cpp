@@ -12,15 +12,24 @@ int main()
 	using array = tdg::json::array;
 	using object = tdg::json::object;
 
-	value v{ "abc", 2.0, 3, true };
-	COUT("After v creation");
-	value v2{ array{"abc", true}, {"xzy", 2} };
+	tdg::json::printer<std::fixed, 9> p(std::cout);
 
+	value v{ "abc", 2.0, 3, true, nullptr, value{"abc", true, "xyz", value{1, 2, false}} };
+	p.print(v);
+	std::cout << std::endl;
+
+	value v2{"abc", true};
+	p.print(v2);
+	std::cout << std::endl;
+
+	/*
 	char char_arr[] = { 'a', 'b', 'c', 'd' };
 	value v3{ char_arr, nullptr };
-	value v4{ {"abc", array{2}}, {"xyz", -2} };
+	value v4{ value{"abc", array{2}}, value{"xyz", -2} };
 
-	tdg::json::printer<std::fixed, 9> p(std::cout);
+	std::string s = "asdfadf";
+	value v5(s);
+
 
 	p.print(v);
 	std::cout << std::endl;
@@ -30,6 +39,9 @@ int main()
 	std::cout << std::endl;
 	p.print(v4);
 	std::cout << std::endl;
+	p.print(v5);
+	std::cout << std::endl;
+	*/
 	
 	return 0;
 }

@@ -31,42 +31,52 @@ namespace tdg::json
 
 		value() : m_value(object()) { COUT("value default ctor"); }
 		value(const value& other) : m_value(other.m_value) { COUT("value copy ctor"); }
-		value(value&& other) : m_value(std::move(other.m_value)) { COUT("value move ctor"); }
+		value(value&& other) noexcept : m_value(std::move(other.m_value)) { COUT("value move ctor"); }
 		~value() { COUT("value dtor"); }
 
-		value(value_list values)
+		template <typename U, typename... Ts>
+		value(U&& first, Ts&&... rest) //requires std::negation_v<std::is_same<std::decay_t<U>, value> >
 		{
-			COUT("value initializer_list ctor");
-			assert(values.size() > 0);
-			// check for potential JSON object member
-			if (values.size() == 2u && values.begin()->is_string())
+			auto arr = array();
+			arr.reserve(1u + sizeof...(Ts));
+			expand(arr, std::forward<U>(first), std::forward<Ts>(rest)...);
+
+			if constexpr ((1 + sizeof...(Ts)) % 2 == 0)
 			{
-				m_value = object{ {std::get<std::string>(values.begin()->m_value), *(values.begin() + 1)} };
-				return;
-			}
+				auto is_object = true;
 
-			const auto all_pairs = std::all_of(
-				values.begin(),
-				values.end(),
-				[](const value& v)
+				for (auto iter = arr.begin(); iter != arr.end(); iter += 2)
 				{
-					return v.is_object();
-				});
-
-			if (all_pairs)
-			{
-				object final_object;
-
-				for (auto i = values.begin(); i != values.end(); i++)
-				{
-					auto& temp_obj = std::get<object>(i->m_value);
-					final_object.emplace(temp_obj.begin()->first, temp_obj.begin()->second);
+					if (!iter->is_string())
+					{
+						is_object = false;
+						break;
+					}
 				}
-				m_value = std::move(final_object);
+
+				if (is_object)
+				{
+					object obj;
+
+					for (auto iter = arr.begin(); iter != arr.end(); iter += 2)
+					{
+						assert(iter + 1 != arr.end());
+						obj.emplace(
+							std::move(std::get<std::string>(iter->m_value)),
+							std::move(*(iter + 1))
+						);
+					}
+
+					m_value = std::move(obj);
+				}
+				else
+				{
+					m_value = std::move(arr);
+				}
 			}
 			else
 			{
-				m_value = array(std::move(values));
+				m_value = std::move(arr);
 			}
 		}
 
@@ -170,6 +180,20 @@ namespace tdg::json
 			default:
 				break;
 			}
+		}
+
+	private:
+		template <typename U, typename... Ts>
+		void expand(array& arr, U&& first, Ts&&... rest)
+		{
+			arr.emplace_back(value(std::forward<U>(first)));
+			expand(arr, std::forward<Ts>(rest)...);
+		}
+
+		template <typename U>
+		void expand(array& arr, U&& last)
+		{
+			arr.emplace_back(value(std::forward<U>(last)));
 		}
 
 	private:
