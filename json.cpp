@@ -15,11 +15,18 @@ int main()
 	tdg::json::printer<std::fixed, 9> p(std::cout);
 
 	value v{ "abc", 2.0, 3, true, nullptr, value{"abc", true, "xyz", value{1, 2, false}} };
+	v[2] = 5;
 	p.print(v);
 	std::cout << std::endl;
 
 	value v2{"abc", true};
 	p.print(v2);
+	std::cout << std::endl;
+
+	value v6 = std::move(v2);
+	v6["abc"] = false;
+	v6["def"] = 8;
+	p.print(v6);
 	std::cout << std::endl;
 
 	/*
