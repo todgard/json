@@ -3,6 +3,8 @@
 #
 cmake_minimum_required (VERSION 3.13)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
@@ -27,7 +29,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-include_directories(.)
+#include_directories(./)
 add_executable(tests tests/test.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
