@@ -15,7 +15,7 @@ project ("json")
 
 include_directories(./)
 # Add source to this project's executable.
-add_executable (json "json.cpp" "json.h" "value.h" )
+add_executable (json "json.cpp" "json.h" "value.h" "printer.h" "value_visitor.h" "pretty_printer.h")
 
 # TODO: Add tests and install targets if needed.
 
@@ -29,8 +29,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-#include_directories(./)
-add_executable(tests tests/test.cpp)
+add_executable(tests tests/test.cpp "pretty_printer.h")
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)

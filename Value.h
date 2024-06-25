@@ -73,8 +73,6 @@ namespace tdg::json
 		explicit(false) value(array&& arr) : m_value(std::move(arr)) {}
 		explicit(false) value(std::string&& s) : m_value(std::move(s)) {}
 		explicit(false) value(const char* s) : m_value(std::string(s)) {}
-		template <std::size_t N>
-		explicit(false) value(const char(&p)[N]) : m_value(std::string(p, N)) {}
 		explicit(false) value(std::nullptr_t) {}
 
 		template <typename T>

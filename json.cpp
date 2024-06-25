@@ -1,7 +1,7 @@
 ﻿// json.cpp : Defines the entry point for the application.
 //
 
-#include "printer.h"
+#include "pretty_printer.h"
 #include "value.h"
 
 using namespace std;
@@ -12,7 +12,7 @@ int main()
 	using array = tdg::json::array;
 	using object = tdg::json::object;
 
-	tdg::json::printer<std::fixed, 9> p(std::cout);
+	tdg::json::pretty_printer<> p(std::cout);
 
 	value v{ "abc", 2.0, 3, true, nullptr, value{"abc", true, "xyz", value{1, 2, false}} };
 	v[2] = 5;
@@ -29,18 +29,14 @@ int main()
 	p.print(v6);
 	std::cout << std::endl;
 
-	/*
-	char char_arr[] = { 'a', 'b', 'c', 'd' };
-	value v3{ char_arr, nullptr };
-	value v4{ value{"abc", array{2}}, value{"xyz", -2} };
+	char char_arr[] = { 'a', 'b', 'c', 'W', '\0'};
+	value v3{ char_arr, char_arr };
+	value v4{ value{"Przemys\u0142aw", array{2}}, value{"Szyma\u0144ski", -2} };
 
 	std::string s = "asdfadf";
-	value v5(s);
-
+	value v5(std::string{s});
 
 	p.print(v);
-	std::cout << std::endl;
-	p.print(v2);
 	std::cout << std::endl;
 	p.print(v3);
 	std::cout << std::endl;
@@ -48,7 +44,6 @@ int main()
 	std::cout << std::endl;
 	p.print(v5);
 	std::cout << std::endl;
-	*/
 	
 	return 0;
 }

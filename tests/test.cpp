@@ -50,6 +50,7 @@ TEST_CASE( "Array of string key, value pair has to be forced", "[value]" )
 TEST_CASE( "Simple array", "[value]" )
 {
 	value v{ "abc", 2u, 3.0, -1, false, nullptr };
+
 	SECTION("Array created successfully")
 	{
 		REQUIRE(v.is_array());
