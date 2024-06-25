@@ -50,29 +50,48 @@ TEST_CASE( "Array of string key, value pair has to be forced", "[value]" )
 TEST_CASE( "Simple array", "[value]" )
 {
 	value v{ "abc", 2u, 3.0, -1, false, nullptr };
-	REQUIRE(v.is_array());
-	REQUIRE(v[0].is_string());
-	REQUIRE(v[1].is_unsigned_integer());
-	REQUIRE(v[2].is_double());
-	REQUIRE(v[3].is_signed_integer());
-	REQUIRE(v[4].is_boolean());
-	REQUIRE(v[5].is_null());
+	SECTION("Array created successfully")
+	{
+		REQUIRE(v.is_array());
+		REQUIRE(v[0].is_string());
+		REQUIRE(v[1].is_unsigned_integer());
+		REQUIRE(v[2].is_double());
+		REQUIRE(v[3].is_signed_integer());
+		REQUIRE(v[4].is_boolean());
+		REQUIRE(v[5].is_null());
+	}
 
-	REQUIRE_THROWS_AS(v[0].get<bool>(), std::bad_variant_access);
+	SECTION("Using wrong type to get value throws an exception")
+	{
+		REQUIRE_THROWS_AS(v[0].get<bool>(), std::bad_variant_access);
+	}
 
-	auto b = v[4].get<bool>();
-	REQUIRE(b == false);
+	SECTION("Checking stored value")
+	{
+		auto b = v[4].get<bool>();
+		REQUIRE(b == false);
+	}
 
-	value v2{2u};
-	v[4] = v2;
-	REQUIRE(v[4].is_unsigned_integer());
+	SECTION("Using assignment operator allows to use different underlying types")
+	{
+		value v2{ 2u };
+		v[4] = v2;
+		REQUIRE(v[4].is_unsigned_integer());
 
-	auto& s = v[0].get<std::string>();
-	s = "def";
-	REQUIRE(v[0].get<std::string>() == "def");
 
-	REQUIRE_THROWS_AS(v[5].set("xyz"), incompatible_assignment_exception);
+		v[5] = value("abc", 2.0);
+		REQUIRE(v[5].is_object());
+	}
 
-	v[5] = value("abc", 2.0);
-	REQUIRE(v[5].is_object());
+	SECTION("Underlying string can be referenced")
+	{
+		auto& s = v[0].get<std::string>();
+		s = "def";
+		REQUIRE(v[0].get<std::string>() == "def");
+	}
+
+	SECTION("Setter function throws if different types")
+	{
+		REQUIRE_THROWS_AS(v[5].set("xyz"), incompatible_assignment_exception);
+	}
 }

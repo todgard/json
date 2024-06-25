@@ -35,37 +35,37 @@ namespace tdg::json
 			}
 		}
 
-		virtual void visit(const std::string& s) const
+		void visit(const std::string& s) const override
 		{
 			m_out << std::quoted(s);
 		}
 
-		virtual void visit(int64_t sint) const
+		void visit(int64_t sint) const override
 		{
 			m_out << sint;
 		}
 
-		virtual void visit(uint64_t uint) const
+		void visit(uint64_t uint) const override
 		{
 			m_out << uint;
 		}
 
-		virtual void visit(double d) const
+		void visit(double d) const override
 		{
 			m_out << float_format << d;
 		}
 		
-		virtual void visit(bool b) const
+		void visit(bool b) const override
 		{
 			m_out << (b ? "true" : "false");
 		}
 
-		virtual void visit(nullptr_t) const
+		void visit(nullptr_t) const override
 		{
 			m_out << "null";
 		}
 
-		virtual void visit(const array& items) const
+		void visit(const array& items) const override
 		{
 			m_out << '[';
 
@@ -84,7 +84,7 @@ namespace tdg::json
 			m_out << ']';
 		}
 
-		virtual void visit(const object& obj) const
+		void visit(const object& obj) const override
 		{
 			m_out << '{';
 

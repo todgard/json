@@ -27,7 +27,7 @@ namespace tdg::json
 		};
 
 		template <std::size_t S, typename V>
-		struct is_object_constructible<S, V> : public std::integral_constant<bool, (S > 0) && (S % 2u == 1)>
+		struct is_object_constructible<S, V> : public std::integral_constant<bool, (S > 0) && (S % 2u == 1u)>
 		{
 		};
 	}
@@ -56,7 +56,7 @@ namespace tdg::json
 		value& operator=(value&& v) = default;
 
 		template <typename U, typename... Ts>
-		value(U&& first, Ts&&... rest) requires requires(Ts...) { requires sizeof...(Ts) > 0; }
+		value(U&& first, Ts&&... rest) requires requires(Ts...) { requires sizeof...(Ts) > 0u; }
 		{
 			if constexpr (detail::is_object_constructible<0u, U, Ts...>::value)
 			{
