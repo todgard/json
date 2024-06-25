@@ -37,7 +37,7 @@ namespace tdg::json
 
 		virtual void visit(const std::string& s) const
 		{
-			m_out << '"' << s << '"';
+			m_out << std::quoted(s);
 		}
 
 		virtual void visit(int64_t sint) const
@@ -95,7 +95,7 @@ namespace tdg::json
 					m_out << ',';
 				}
 
-				m_out << '"' << key << '"' << ':';
+				m_out << std::quoted(key) << ':';
 				val.accept(*this);
 
 				seen_first = true;

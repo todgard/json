@@ -18,5 +18,6 @@ namespace tdg::json
 		virtual void visit(nullptr_t) const = 0;
 		virtual void visit(const array&) const = 0;
 		virtual void visit(const object&) const = 0;
+		virtual ~value_visitor() = default;
 	};
 }

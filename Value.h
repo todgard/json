@@ -45,6 +45,8 @@ namespace tdg::json
 
 		using internal_value_type = std::variant<object, array, std::string, uint64_t, int64_t, double, constant>;
 
+		internal_value_type m_value = constant::JSON_NULL;
+
 	public:
 		value() { COUT("value default ctor"); }
 		value(const value& other) : m_value(other.m_value) { COUT("value copy ctor"); }
@@ -55,13 +57,10 @@ namespace tdg::json
 		value& operator=(const value& v) = default;
 		value& operator=(value&& v) = default;
 
-		//template <typename U, typename... Ts, typename X = std::enable_if_t<sizeof...(Ts) != 0> >
 		template <typename U, typename... Ts>
 		value(U&& first, Ts&&... rest) requires requires(Ts...) { requires sizeof...(Ts) > 0; }
 		{
-			constexpr auto args_count = sizeof...(Ts) + 1;
-
-			if constexpr (args_count % 2u == 0 && detail::is_object_constructible<0u, U, Ts...>::value)
+			if constexpr (detail::is_object_constructible<0u, U, Ts...>::value)
 			{
 				m_value = make_object(std::forward<U>(first), std::forward<Ts>(rest)...);
 			}
@@ -70,58 +69,6 @@ namespace tdg::json
 				m_value = make_array(std::forward<U>(first), std::forward<Ts>(rest)...);
 			}
 
-			/*
-			// Optimization for (string, value) pair of parameters
-			if constexpr (args_count == 2u && std::is_constructible_v<std::string, std::decay_t<U> >)
-			{
-				auto obj = object();
-				obj.emplace(std::string(std::forward<U>(first)), std::forward<Ts>(rest)...);
-				m_value = std::move(obj);
-				return;
-			}
-			else
-			{
-				auto arr = make_array(std::forward<U>(first), std::forward<Ts>(rest)...);
-
-				if constexpr (args_count % 2 == 0)
-				{
-					auto is_object = true;
-
-					for (auto iter = arr.begin(); iter != arr.end(); iter += 2)
-					{
-						if (!iter->is_string())
-						{
-							is_object = false;
-							break;
-						}
-					}
-
-					if (is_object)
-					{
-						m_value = object();
-						auto& obj = std::get<object>(m_value);
-
-						for (auto iter = arr.begin(); iter != arr.end(); iter += 2)
-						{
-							assert(iter + 1 != arr.end());
-							//TODO: add checks/parameterization for duplicated keys
-							obj.try_emplace(
-								std::move(std::get<std::string>(iter->m_value)),
-								std::move(*(iter + 1))
-							);
-						}
-					}
-					else
-					{
-						m_value = std::move(arr);
-					}
-				}
-				else
-				{
-					m_value = std::move(arr);
-				}
-			}
-			*/
 		}
 
 		explicit(false) value(object&& obj) : m_value(std::move(obj)) {COUT("value object&& ctor");}
@@ -192,24 +139,22 @@ namespace tdg::json
 
 		void accept(const value_visitor& visitor) const
 		{
-			using visit_func = std::function<void(const value_visitor&, const internal_value_type&)>;
-
-			static std::array<visit_func, 7> visitor_wrapper_array{
-				[](const value_visitor& vtor, const internal_value_type& val) { vtor.visit(std::get<object>(val)); },
-				[](const value_visitor& vtor, const internal_value_type& val) { vtor.visit(std::get<array>(val)); },
-				[](const value_visitor& vtor, const internal_value_type& val) { vtor.visit(std::get<std::string>(val)); },
-				[](const value_visitor& vtor, const internal_value_type& val) { vtor.visit(std::get<uint64_t>(val)); },
-				[](const value_visitor& vtor, const internal_value_type& val) { vtor.visit(std::get<int64_t>(val)); },
-				[](const value_visitor& vtor, const internal_value_type& val) { vtor.visit(std::get<double>(val)); },
-				[](const value_visitor& vtor, const internal_value_type& val) {
-					auto c = std::get<constant>(val);
-					c == constant::JSON_NULL
-						? vtor.visit(nullptr)
-						: vtor.visit(c == constant::JSON_TRUE);
-				}
-			};
-
-			visitor_wrapper_array[m_value.index()](visitor, m_value);
+			std::visit(
+				[&visitor]<typename T>(const T& arg)
+				{
+					if constexpr (std::is_same_v<constant, T>)
+					{
+						arg == constant::JSON_NULL
+							? visitor.visit(nullptr)
+							: visitor.visit(arg == constant::JSON_TRUE);
+					}
+					else
+					{
+						visitor.visit(arg);
+					}
+				},
+				m_value
+			);
 		}
 
 		template <typename T>
@@ -218,6 +163,11 @@ namespace tdg::json
 					 std::is_constructible_v<std::string, std::decay_t<T>>
 		{
 			return std::get<object>(m_value)[std::forward<T>(key)];
+		}
+
+		const value& operator[](const std::string& key) const
+		{
+			return std::get<object>(m_value).at(key);
 		}
 
 		value& operator[](std::size_t index)
@@ -231,9 +181,8 @@ namespace tdg::json
 		}
 
 		template <typename T>
-		T& get()
-			requires std::is_same_v<object, T> || std::is_same_v<array, T> || std::is_same_v<std::string, T> ||
-					 std::is_same_v<uint64_t, T> || std::is_same_v<int64_t, T> || std::is_same_v<double, T> ||
+		T get() const
+			requires std::is_same_v<uint64_t, T> || std::is_same_v<int64_t, T> || std::is_same_v<double, T> ||
 					 std::is_same_v<bool, T> || std::is_same_v<std::nullptr_t, T>
 		{
 			if constexpr (std::is_same_v<bool, T>)
@@ -251,9 +200,37 @@ namespace tdg::json
 		}
 
 		template <typename T>
-		const T& get() const
+		T& get()
+			requires std::is_same_v<object, T> || std::is_same_v<array, T> || std::is_same_v<std::string, T>
 		{
 			return std::get<T>(m_value);
+		}
+
+		template <typename T>
+		const T& get() const
+			requires std::is_same_v<object, T> || std::is_same_v<array, T> || std::is_same_v<std::string, T>
+		{
+			return std::get<T>(m_value);
+		}
+
+		void set(const value& other)
+		{
+			if (m_value.index() != other.m_value.index())
+			{
+				throw incompatible_assignment_exception("Call to value::set(const value&) requires new value to have the same type as the old one");
+			}
+
+			m_value = other.m_value;
+		}
+
+		void set(value&& other)
+		{
+			if (m_value.index() != other.m_value.index())
+			{
+				throw incompatible_assignment_exception("Call to value::set(const value&) requires new value to have the same type as the old one");
+			}
+
+			m_value = std::move(other.m_value);
 		}
 
 		template <typename T, typename... Ts>
@@ -271,7 +248,11 @@ namespace tdg::json
 	private:
 
 		template <typename K, typename V, typename... Ts>
-		static constexpr object make_object(K&& key, V&& val, Ts&&... ts) requires requires(K, Ts...) { requires std::is_constructible_v<std::string, std::decay_t<K> >;  requires sizeof...(Ts) % 2 == 0; }
+		static constexpr object make_object(K&& key, V&& val, Ts&&... ts) 
+			requires requires(K, Ts...) {
+				requires std::is_constructible_v<std::string, std::decay_t<K> >;
+				requires sizeof...(Ts) % 2 == 0;
+			}
 		{
 			object obj;
 
@@ -293,7 +274,5 @@ namespace tdg::json
 				make_object(obj, std::forward<Ts>(ts)...);
 			}
 		}
-
-		internal_value_type m_value = constant::JSON_NULL;
 	};
 }
