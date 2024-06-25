@@ -210,7 +210,7 @@ namespace tdg::json
 
 		void set(const value& other)
 		{
-			if (m_value.index() != other.m_value.index())
+			if (!is_null() && m_value.index() != other.m_value.index())
 			{
 				throw incompatible_assignment_exception("Call to value::set(const value&) requires new value to have the same type as the old one");
 			}
@@ -220,7 +220,7 @@ namespace tdg::json
 
 		void set(value&& other)
 		{
-			if (m_value.index() != other.m_value.index())
+			if (!is_null() && m_value.index() != other.m_value.index())
 			{
 				throw incompatible_assignment_exception("Call to value::set(const value&) requires new value to have the same type as the old one");
 			}
