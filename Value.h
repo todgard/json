@@ -17,8 +17,6 @@
 #include "value_visitor.h"
 
 
-#define COUT(x) (std::cout << x << '\n')
-
 namespace tdg::json
 {
 	namespace detail
@@ -48,11 +46,11 @@ namespace tdg::json
 		internal_value_type m_value = constant::JSON_NULL;
 
 	public:
-		value() { COUT("value default ctor"); }
-		value(const value& other) : m_value(other.m_value) { COUT("value copy ctor"); }
-		value(value&& other) noexcept : m_value(std::move(other.m_value)) { COUT("value move ctor"); }
+		value() = default;
+		value(const value& other) = default;
+		value(value&& other) noexcept = default;
 
-		~value() { COUT("value dtor"); }
+		~value() = default;
 
 		value& operator=(const value& v) = default;
 		value& operator=(value&& v) = default;
@@ -71,18 +69,17 @@ namespace tdg::json
 
 		}
 
-		explicit(false) value(object&& obj) : m_value(std::move(obj)) {COUT("value object&& ctor");}
-		explicit(false) value(array&& arr) : m_value(std::move(arr)) {COUT("value array&& move ctor");}
-		explicit(false) value(std::string&& s) : m_value(std::move(s)) {COUT("value string&& move ctor");}
-		explicit(false) value(const char* s) : m_value(std::string(s)) {COUT("value const char* ctor");}
+		explicit(false) value(object&& obj) : m_value(std::move(obj)) {}
+		explicit(false) value(array&& arr) : m_value(std::move(arr)) {}
+		explicit(false) value(std::string&& s) : m_value(std::move(s)) {}
+		explicit(false) value(const char* s) : m_value(std::string(s)) {}
 		template <std::size_t N>
-		explicit(false) value(const char(&p)[N]) : m_value(std::string(p, N)) {COUT("value const char&[] ctor");}
-		explicit(false) value(std::nullptr_t) {COUT("value nullptr_t ctor");}
+		explicit(false) value(const char(&p)[N]) : m_value(std::string(p, N)) {}
+		explicit(false) value(std::nullptr_t) {}
 
 		template <typename T>
 		explicit(false) value(T arg) requires std::is_integral_v<T> || std::is_floating_point_v<T>
 		{
-			COUT("value int/bool/double ctor");
 			if constexpr (std::is_same_v<std::decay_t<T>, bool>)
 			{
 				m_value = (arg ? constant::JSON_TRUE : constant::JSON_FALSE);
