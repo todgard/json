@@ -15,5 +15,12 @@ namespace tdg::json
 	public:
 		explicit incompatible_assignment_exception(const std::string& msg) : std::runtime_error(msg) {}
 	};
+
+	// Parsing exceptions
+	class invalid_json_exception : public std::runtime_error
+	{
+	public:
+		explicit invalid_json_exception(const std::string& msg) : std::runtime_error(msg) {}
+	};
 }
 

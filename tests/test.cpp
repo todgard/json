@@ -1,5 +1,9 @@
+#include <fstream>
+
 #include <catch2/catch_test_macros.hpp>
 #include "value.h"
+#include "parser.h"
+#include "pretty_printer.h"
 
 
 using namespace tdg::json;
@@ -130,14 +134,42 @@ TEST_CASE( "Simple array", "[value]" )
 TEST_CASE( "Simple object", "[value]" )
 {
 	value v{ "abc", 2 };
-	REQUIRE(v.is_object());
-	REQUIRE(v.get<object>().size() == 1u);
-	REQUIRE(v.get<object>().contains("abc"));
-	REQUIRE(v["abc"].is_signed_integer());
-	REQUIRE(v["abc"].get<int64_t>() == 2);
+
+	SECTION("Simple object creation")
+	{
+		REQUIRE(v.is_object());
+		REQUIRE(v.get<object>().size() == 1u);
+		REQUIRE(v.get<object>().contains("abc"));
+		REQUIRE(v["abc"].is_signed_integer());
+		REQUIRE(v["abc"].get<int64_t>() == 2);
+	}
+
+	SECTION("Using [] operator with non-existent key on value holding object inserts new element")
+	{
+		auto& new_elem = v["xyz"];
+
+		REQUIRE(v.get<object>().size() == 2u);
+		REQUIRE(new_elem.is_null());
+		new_elem = true;
+		REQUIRE(new_elem.is_boolean());
+	}
 }
 
 TEST_CASE( "Creating object with duplicate keys should throw", "[value]" )
 {
 	REQUIRE_THROWS_AS(value("abc", 2, "abc", 5), duplicate_key_exception);
 }
+
+TEST_CASE("Parsing string")
+{
+	std::ifstream f("C:\\Users\\psz\\source\\repos\\json\\test_quoted.json");
+	//std::ifstream f2("C:\\Users\\psz\\source\\repos\\json\\CMakePresets.json");
+
+	parser p;
+
+	auto v = p.parse(f);
+	REQUIRE(v.is_object());
+	
+	pretty_printer<std::scientific, 16>(std::cout).print(v);
+}
+

@@ -15,7 +15,7 @@ project ("json")
 
 include_directories(./)
 # Add source to this project's executable.
-add_executable (json "json.cpp" "json.h" "value.h" "printer.h" "value_visitor.h" "pretty_printer.h")
+add_executable (json "json.cpp" "json.h" "value.h" "printer.h" "value_visitor.h" "pretty_printer.h" "parser.h")
 
 # TODO: Add tests and install targets if needed.
 
