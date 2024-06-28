@@ -41,7 +41,7 @@ namespace tdg::json
 
 		void visit(const std::string& s) const override
 		{
-			m_out << std::quoted(s);
+			m_out << '"' << s << '"';
 		}
 
 		void visit(int64_t sint) const override
@@ -71,6 +71,12 @@ namespace tdg::json
 
 		void visit(const array& values) const override
 		{
+			if (values.empty())
+			{
+				m_out << "[]";
+				return;
+			}
+
 			m_out << "[\n";
 			push_level();
 
@@ -94,6 +100,12 @@ namespace tdg::json
 
 		void visit(const object& obj) const override
 		{
+			if (obj.empty())
+			{
+				m_out << "{}";
+				return;
+			}
+
 			m_out << "{\n";
 			push_level();
 
@@ -104,7 +116,7 @@ namespace tdg::json
 					m_out << ",\n";
 				}
 
-				m_out << indent() << std::quoted(key) << " : ";
+				m_out << indent() << '"' << key  << "\" : ";
 				val.accept(*this);
 
 				seen_first = true;

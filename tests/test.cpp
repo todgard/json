@@ -162,8 +162,12 @@ TEST_CASE( "Creating object with duplicate keys should throw", "[value]" )
 
 TEST_CASE("Parsing string")
 {
+#ifdef __GNUG__
+	std::ifstream f("/home/psz/.vs/json/test_quoted.json");
+#else
 	std::ifstream f("C:\\Users\\psz\\source\\repos\\json\\test_quoted.json");
 	//std::ifstream f2("C:\\Users\\psz\\source\\repos\\json\\CMakePresets.json");
+#endif
 
 	parser p;
 

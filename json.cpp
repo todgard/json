@@ -1,6 +1,9 @@
 ﻿// json.cpp : Defines the entry point for the application.
 //
 
+#include <fstream>
+
+#include "parser.h"
 #include "pretty_printer.h"
 #include "value.h"
 
@@ -12,6 +15,7 @@ int main()
 	using array = tdg::json::array;
 	using object = tdg::json::object;
 
+	/*
 	tdg::json::pretty_printer<> p(std::cout);
 
 	value v{ "abc", 2.0, 3, true, nullptr, value{"abc", true, "xyz", value{1, 2, false}} };
@@ -44,6 +48,21 @@ int main()
 	std::cout << std::endl;
 	p.print(v5);
 	std::cout << std::endl;
+	*/
 	
+#ifdef __GNUG__
+	std::ifstream f("/home/psz/catalog.json");
+	//std::ifstream f("/home/psz/.vs/json/test_quoted.json");
+#else
+	std::ifstream f("C:\\Users\\psz\\source\\repos\\json\\test_quoted.json");
+	//std::ifstream f2("C:\\Users\\psz\\source\\repos\\json\\CMakePresets.json");
+#endif
+
+	tdg::json::parser json_parser;
+
+	auto parsed = json_parser.parse(f);
+	
+	//tdg::json::pretty_printer<std::scientific, 16>(std::cout).print(parsed);
+
 	return 0;
 }

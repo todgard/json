@@ -1,8 +1,9 @@
 #pragma once
 
+#include <iomanip>
+#include <sstream>
 #include <stack>
 #include <string>
-#include <sstream>
 
 #include "json_errors.h"
 #include "value.h"
@@ -12,15 +13,17 @@ namespace tdg::json
 {
 	class parser final
 	{
-		enum class state {
-			WITHIN_OBJECT,
-			WITHIN_ARRAY
+		enum class FINALIZE_TYPE {
+			OBJECT,
+			ARRAY,
+			ITEM
 		};
 
 	public:
 		value parse(const std::string& input)
 		{
 			auto iss = std::istringstream(input);
+
 			return parse(iss);
 		}
 
@@ -34,56 +37,75 @@ namespace tdg::json
 				{
 					continue;
 				}
-				else if (current_char == '{')
+
+				if (current_char == '{')
 				{
 					push_aggregate<object>();
+					m_is_empty_aggregate = true;
+					continue;
 				}
-				else if (current_char == '}')
-				{
-					finalize();
-				}
-				else if (current_char == '[')
+
+				if (current_char == '[')
 				{
 					push_aggregate<array>();
+					m_is_empty_aggregate = true;
+					continue;
+				}
+
+				if (current_char == '}')
+				{
+					if (!m_is_empty_aggregate)
+					{
+						finalize(FINALIZE_TYPE::OBJECT);
+					}
 				}
 				else if (current_char == ']')
 				{
-					finalize();
+					if (!m_is_empty_aggregate)
+					{
+						finalize(FINALIZE_TYPE::ARRAY);
+					}
 				}
 				else if (current_char == ',')
 				{
-					finalize();
+					finalize(FINALIZE_TYPE::ITEM);
 				}
 				else if (current_char == '"')
 				{
-					if (istr.unget())
-					{
-						process_string(istr);
-					}
+					push_string(istr);
 				}
 				else if (current_char == 't')
 				{
-					process_true(istr);
+					push_true(istr);
 				}
 				else if (current_char == 'f')
 				{
-					process_false(istr);
+					push_false(istr);
 				}
 				else if (current_char == 'n')
 				{
-					process_null(istr);
+					push_null(istr);
 				}
-				else if (current_char == '-' || (std::isdigit(current_char) && current_char != '0'))
+				else if (current_char == '-' || std::isdigit(current_char))
 				{
-					if (istr.unget())
-					{
-						process_number(istr);
-					}
+					push_number(istr, current_char);
 				}
+				else
+				{
+					throw invalid_json_exception("Unexpected character while parsing JSON string");
+				}
+
+				m_is_empty_aggregate = false;
+			}
+
+			if (m_stack.size() != 1u)
+			{
+				m_stack.size() == 0
+					? throw invalid_json_exception("Nothing to parse")
+					: throw invalid_json_exception("Unclosed array/object after parsing available data");
 			}
 
 			auto value = std::move(m_stack.top());
-			m_stack.pop();
 
 			return value;
 		}
@@ -105,41 +127,84 @@ namespace tdg::json
 			m_stack.emplace(T());
 		}
 
-		void finalize()
+		void finalize(FINALIZE_TYPE type)
 		{
+			/*
+			* When finalizing non-empty array or array item, the expected stack layout is:		root_value -> ... -> array -> current_value
+			* After finalize current_value should be contained in array and stack should be:	root_value -> ... -> array
+			* For object, the expected layout is:												root_value -> ... -> object -> key_value -> current_value
+			* After finalize object should contain {key_value, current_value} pair and stack:	root_value -> ... -> object
+			*/
+
 			auto current_value = std::move(m_stack.top());
 
 			m_stack.pop();
 
-			if (!m_stack.empty())
+			assert(!m_stack.empty());
+
+			if (m_stack.top().is_array())
 			{
-				if (m_stack.top().is_array())
+				if (type == FINALIZE_TYPE::OBJECT)
 				{
-					m_stack.top().get<array>().emplace_back(std::move(current_value));
+					throw invalid_json_exception("Found unexpected object-closing character '}'");
 				}
-				else if (m_stack.top().is_string())
+
+				m_stack.top().get<array>().emplace_back(std::move(current_value));
+			}
+			else if (m_stack.top().is_string())
+			{
+				if (type == FINALIZE_TYPE::ARRAY)
 				{
-					auto parent_value = std::move(m_stack.top());
-
-					m_stack.pop();
-
-					auto& parent_object = m_stack.top();
-					assert(parent_object.is_object());
-					parent_object[std::move(parent_value.get<std::string>())] = std::move(current_value);
+					throw invalid_json_exception("Found unexpected array-closing character ']'");
 				}
+
+				auto key_value = std::move(m_stack.top());
+
+				m_stack.pop();
+
+				auto& parent_object = m_stack.top();
+
+				if (!m_stack.top().is_object())
+				{
+					throw invalid_json_exception("Unable to finalize object");
+				}
+
+				parent_object[std::move(key_value.get<std::string>())] = std::move(current_value);
 			}
 		}
 
-		void process_string(std::istream& istr)
+		void push_string(std::istream& istr)
 		{
+			char current_char;
 			std::string parsed_string;
+			auto is_escaped = false;
 
-			istr >> std::quoted(parsed_string);
+			while (istr.get(current_char))
+			{
+				if (current_char == '\\')
+				{
+					is_escaped = !is_escaped;
+				}
+				else if (current_char == '"' && !is_escaped)
+				{
+					break;
+				}
+				else if (std::iscntrl(current_char))
+				{
+					throw invalid_json_exception("Control characters are not allowed in JSON string");
+				}
+				else
+				{
+					is_escaped = false;
+				}
+
+				parsed_string.push_back(current_char);
+			}
 
 			m_stack.emplace(std::move(parsed_string));
 		}
 
-		void process_true(std::istream& istr)
+		void push_true(std::istream& istr)
 		{
 			char arr[4];
 
@@ -155,7 +220,7 @@ namespace tdg::json
 			}
 		}
 
-		void process_false(std::istream& istr)
+		void push_false(std::istream& istr)
 		{
 			char arr[5];
 
@@ -171,7 +236,7 @@ namespace tdg::json
 			}
 		}
 
-		void process_null(std::istream& istr)
+		void push_null(std::istream& istr)
 		{
 			char arr[4];
 
@@ -187,37 +252,41 @@ namespace tdg::json
 			}
 		}
 
-		void process_number(std::istream& istr)
+		void push_number(std::istream& istr, char last_char)
 		{
-			static const std::string allowed_chars("-+0123456789.eE");
+			//TODO: add handling of digit sequences starting with 0 and -0 cases
+			// and fix error handling
+
+			//static const std::string allowed_chars("0123456789-+.eE");
 			char current_char;
-			auto is_signed = false;
 			auto is_float = false;
+			auto is_signed = (last_char == '-');
 
 			std::string buffer;
-			buffer.reserve(32);
+			buffer.reserve(16);
+			buffer.push_back(last_char);
 
-			if (istr.get(current_char))
+			while (istr.get(current_char))
 			{
-				is_signed = (current_char == '-');
-				buffer.push_back(current_char);
-
-				while (istr.get(current_char))
+				//if (allowed_chars.find(current_char) != std::string::npos)
+				if ((current_char >= '0' && current_char <= '9')
+					|| current_char == '+'
+					|| current_char == '-'
+					|| current_char == 'e'
+					|| current_char == 'E'
+					|| current_char == '.')
 				{
-					if (allowed_chars.find(current_char) != std::string::npos)
+					buffer.push_back(current_char);
+					
+					if (current_char == '.')
 					{
-						buffer.push_back(current_char);
-						
-						if (current_char == '.')
-						{
-							is_float = true;
-						}
+						is_float = true;
 					}
-					else
-					{
-						istr.unget();
-						break;
-					}
+				}
+				else
+				{
+					istr.unget();
+					break;
 				}
 			}
 
@@ -251,5 +320,6 @@ namespace tdg::json
 		}
 
 		std::stack<value> m_stack;
+		bool m_is_empty_aggregate = false;
 	};
 }
