@@ -111,6 +111,7 @@ namespace tdg::json
 		}
 
 	private:
+
 		template <typename T>
 		void push_aggregate() requires std::is_same_v<object, T> || std::is_same_v<array, T>
 		{
@@ -252,7 +253,7 @@ namespace tdg::json
 			}
 		}
 
-		void push_number(std::istream& istr, char last_char)
+		void push_number(std::istream& istr, char first_char)
 		{
 			//TODO: add handling of digit sequences starting with 0 and -0 cases
 			// and fix error handling
@@ -260,11 +261,11 @@ namespace tdg::json
 			//static const std::string allowed_chars("0123456789-+.eE");
 			char current_char;
 			auto is_float = false;
-			auto is_signed = (last_char == '-');
+			auto is_unsigned_int = (first_char != '-');
 
 			std::string buffer;
 			buffer.reserve(16);
-			buffer.push_back(last_char);
+			buffer.push_back(first_char);
 
 			while (istr.get(current_char))
 			{
@@ -281,6 +282,7 @@ namespace tdg::json
 					if (current_char == '.')
 					{
 						is_float = true;
+						is_unsigned_int = false;
 					}
 				}
 				else
@@ -292,25 +294,24 @@ namespace tdg::json
 
 			if (istr)
 			{
-				std::istringstream iss(buffer);
+				std::size_t pos = 0;
 
-				if (is_float)
+				if (is_unsigned_int)
 				{
-					double d = 0;
-					iss >> d;
-					m_stack.emplace(d);
+					m_stack.emplace(std::stoull(buffer, &pos));
 				}
-				else if (is_signed)
+				else if (is_float)
 				{
-					int64_t si = 0;
-					iss >> si;
-					m_stack.emplace(si);
+					m_stack.emplace(std::stod(buffer, &pos));
 				}
 				else
 				{
-					uint64_t ui;
-					iss >> ui;
-					m_stack.emplace(ui);
+					m_stack.emplace(std::stoll(buffer, &pos));
+				}
+
+				if (pos != buffer.size())
+				{
+					throw invalid_json_exception("Invalid number: " + buffer);
 				}
 			}
 			else
