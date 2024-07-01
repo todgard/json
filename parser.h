@@ -13,10 +13,23 @@ namespace tdg::json
 {
 	class parser final
 	{
+		using parsing_func_t = void (parser::*)(std::istream&, char);
+
 		enum class FINALIZE_TYPE {
 			OBJECT,
 			ARRAY,
 			ITEM
+		};
+
+		enum : char {
+			OBJECT_START_BRACE			= '{',
+			OBJECT_END_BRACE			= '}',
+			ARRAY_START_BRACE			= '[',
+			ARRAY_END_BRACE				= ']',
+			VALUE_SEPARATOR				= ',',
+			KEY_VALUE_SEPARATOR			= ':',
+			QUOTE						= '"',
+			COMMA						= ','
 		};
 
 	public:
@@ -31,76 +44,19 @@ namespace tdg::json
 		{
 			char current_char;
 
-			while (istr.get(current_char))
+			while (m_continuation_func && istr.get(current_char))
 			{
-				if (std::isspace(current_char) || current_char == ':')
+				if (std::isspace(current_char))
 				{
 					continue;
 				}
 
-				if (current_char == '{')
-				{
-					push_aggregate<object>();
-					m_is_empty_aggregate = true;
-					continue;
-				}
-
-				if (current_char == '[')
-				{
-					push_aggregate<array>();
-					m_is_empty_aggregate = true;
-					continue;
-				}
-
-				if (current_char == '}')
-				{
-					if (!m_is_empty_aggregate)
-					{
-						finalize(FINALIZE_TYPE::OBJECT);
-					}
-				}
-				else if (current_char == ']')
-				{
-					if (!m_is_empty_aggregate)
-					{
-						finalize(FINALIZE_TYPE::ARRAY);
-					}
-				}
-				else if (current_char == ',')
-				{
-					finalize(FINALIZE_TYPE::ITEM);
-				}
-				else if (current_char == '"')
-				{
-					push_string(istr);
-				}
-				else if (current_char == 't')
-				{
-					push_true(istr);
-				}
-				else if (current_char == 'f')
-				{
-					push_false(istr);
-				}
-				else if (current_char == 'n')
-				{
-					push_null(istr);
-				}
-				else if (current_char == '-' || std::isdigit(current_char))
-				{
-					push_number(istr, current_char);
-				}
-				else
-				{
-					throw invalid_json_exception("Unexpected character while parsing JSON string");
-				}
-
-				m_is_empty_aggregate = false;
+				(this->*m_continuation_func)(istr, current_char);
 			}
 
 			if (m_stack.size() != 1u)
 			{
-				m_stack.size() == 0
+				m_stack.empty()
 					? throw invalid_json_exception("Nothing to parse")
 					: throw invalid_json_exception("Unclosed array/object after parsing available data");
 			}
@@ -141,6 +97,8 @@ namespace tdg::json
 
 			m_stack.pop();
 
+			//TODO: fix error handling for situation when the stack becomes empty here (basically extra ] or } characters)
+			// maybe three separate methods for item, array and object to simplify logic
 			assert(!m_stack.empty());
 
 			if (m_stack.top().is_array())
@@ -174,11 +132,40 @@ namespace tdg::json
 			}
 		}
 
+		void parse_scalar(std::istream& istr, const char current_char)
+		{
+			if (current_char == '"')
+			{
+				push_string(istr);
+			}
+			else if (current_char == 't')
+			{
+				push_true(istr);
+			}
+			else if (current_char == 'f')
+			{
+				push_false(istr);
+			}
+			else if (current_char == 'n')
+			{
+				push_null(istr);
+			}
+			else if (current_char == '-' || std::isdigit(current_char))
+			{
+				push_number(istr, current_char);
+			}
+			else
+			{
+				throw invalid_json_exception(tdg::eh::make_error_msg("Unexpected start character for JSON scalar; stream pos: ", istr.tellg()));
+			}
+		}
+
 		void push_string(std::istream& istr)
 		{
-			char current_char;
+			char current_char{};
 			std::string parsed_string;
 			auto is_escaped = false;
+			auto missing_closing_quote = true;
 
 			while (istr.get(current_char))
 			{
@@ -188,11 +175,13 @@ namespace tdg::json
 				}
 				else if (current_char == '"' && !is_escaped)
 				{
+					missing_closing_quote = false;
 					break;
 				}
 				else if (std::iscntrl(current_char))
 				{
-					throw invalid_json_exception("Control characters are not allowed in JSON string");
+					throw invalid_json_exception(
+						tdg::eh::make_error_msg("Control characters are not allowed in JSON string, possibly missing closing quote; stream pos: ", istr.tellg()));
 				}
 				else
 				{
@@ -202,14 +191,30 @@ namespace tdg::json
 				parsed_string.push_back(current_char);
 			}
 
+			//std::cout << "Last string: " << parsed_string << std::endl;
+
+			if (missing_closing_quote)
+			{
+				throw invalid_json_exception(tdg::eh::make_error_msg("Closing quote not found for JSON string", istr.tellg()));
+			}
+
 			m_stack.emplace(std::move(parsed_string));
+		}
+
+		template <std::size_t CNUM>
+		void extract_characters(std::istream& istr, char(&arr)[CNUM])
+		{
+			if (!istr.get(arr, CNUM))
+			{
+				throw invalid_json_exception("Unexpected EOF or read failure while trying extract characters from stream");
+			}
 		}
 
 		void push_true(std::istream& istr)
 		{
-			char arr[4];
+			char arr[4] = {};
 
-			istr.get(arr, 4);
+			extract_characters(istr, arr);
 
 			if (arr[0] == 'r' && arr[1] == 'u' && arr[2] == 'e')
 			{
@@ -217,15 +222,15 @@ namespace tdg::json
 			}
 			else
 			{
-				throw invalid_json_exception("Expected 'true' constant");
+				throw invalid_json_exception(tdg::eh::make_error_msg("Expected 'true' literal", istr.tellg()));
 			}
 		}
 
 		void push_false(std::istream& istr)
 		{
-			char arr[5];
+			char arr[5] = {};
 
-			istr.get(arr, 5);
+			extract_characters(istr, arr);
 
 			if (arr[0] == 'a' && arr[1] == 'l' && arr[2] == 's' && arr[3] == 'e')
 			{
@@ -233,15 +238,15 @@ namespace tdg::json
 			}
 			else
 			{
-				throw invalid_json_exception("Expected 'false' constant");
+				throw invalid_json_exception(tdg::eh::make_error_msg("Expected 'false' literal", istr.tellg()));
 			}
 		}
 
 		void push_null(std::istream& istr)
 		{
-			char arr[4];
+			char arr[4] = {};
 
-			istr.get(arr, 4);
+			extract_characters(istr, arr);
 
 			if (arr[0] == 'u' && arr[1] == 'l' && arr[2] == 'l')
 			{
@@ -249,7 +254,7 @@ namespace tdg::json
 			}
 			else
 			{
-				throw invalid_json_exception("Expected 'null' constant");
+				throw invalid_json_exception(tdg::eh::make_error_msg("Expected 'null' literal", istr.tellg()));
 			}
 		}
 
@@ -258,8 +263,7 @@ namespace tdg::json
 			//TODO: add handling of digit sequences starting with 0 and -0 cases
 			// and fix error handling
 
-			//static const std::string allowed_chars("0123456789-+.eE");
-			char current_char;
+			char current_char{};
 			auto is_float = false;
 			auto is_unsigned_int = (first_char != '-');
 
@@ -269,7 +273,6 @@ namespace tdg::json
 
 			while (istr.get(current_char))
 			{
-				//if (allowed_chars.find(current_char) != std::string::npos)
 				if ((current_char >= '0' && current_char <= '9')
 					|| current_char == '+'
 					|| current_char == '-'
@@ -311,16 +314,105 @@ namespace tdg::json
 
 				if (pos != buffer.size())
 				{
-					throw invalid_json_exception("Invalid number: " + buffer);
+					throw invalid_json_exception(
+						tdg::eh::make_error_msg("Invalid numerical value: ", buffer, "; stream pos: ", istr.tellg()));
 				}
 			}
 			else
 			{
-				throw invalid_json_exception("Invalid number: " + buffer);
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Unexpected EOF or stream failure while reading a numerical value: ", buffer, "; stream pos: ", istr.tellg()));
 			}
 		}
 
-		std::stack<value> m_stack;
-		bool m_is_empty_aggregate = false;
+		void parse_value_start(std::istream& istr, char current_char)
+		{
+			if (current_char == OBJECT_START_BRACE)
+			{
+				push_aggregate<object>();
+				m_is_empty_aggregate = true;
+				m_continuation_func = &parser::parse_object_key_or_end;
+			}
+			else if (current_char == ARRAY_START_BRACE)
+			{
+				push_aggregate<array>();
+				m_is_empty_aggregate = true;
+				m_continuation_func = &parser::parse_array_item_or_end;
+			}
+			else
+			{
+				parse_scalar(istr, current_char);
+				m_continuation_func = &parser::parse_value_end;
+			}
+		}
+
+		void parse_object_key_or_end(std::istream& istr, char current_char)
+		{
+			if (current_char == QUOTE)
+			{
+				parse_scalar(istr, current_char);
+
+				m_is_empty_aggregate = false;
+				m_continuation_func = &parser::parse_value_end;
+			}
+			else if (current_char == OBJECT_END_BRACE)
+			{
+				parse_value_end(istr, current_char);
+			}
+			else
+			{
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Invalid character '", current_char, "' after JSON object starting brace; stream pos: ", istr.tellg()));
+			}
+		}
+
+		void parse_array_item_or_end(std::istream& istr, char current_char)
+		{
+			if (current_char == ARRAY_END_BRACE)
+			{
+				parse_value_end(istr, current_char);
+			}
+			else
+			{
+				m_is_empty_aggregate = false;
+
+				parser::parse_value_start(istr, current_char);
+			}
+		}
+
+		void parse_value_end(std::istream& istr, char current_char)
+		{
+			if (current_char == COMMA)
+			{
+				finalize(FINALIZE_TYPE::ITEM);
+
+				m_continuation_func = &parser::parse_value_start;
+			}
+			else if (current_char == KEY_VALUE_SEPARATOR)
+			{
+				m_continuation_func = &parser::parse_value_start;
+			}
+			else if (current_char == OBJECT_END_BRACE || current_char == ARRAY_END_BRACE)
+			{
+				if (!m_is_empty_aggregate)
+				{
+					finalize(current_char == OBJECT_END_BRACE ? FINALIZE_TYPE::OBJECT : FINALIZE_TYPE::ARRAY);
+				}
+
+                m_is_empty_aggregate = false;
+				m_continuation_func = &parser::parse_value_end;
+			}
+			else
+			{
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Unexpected character '", current_char, "' after a JSON value, expected one of \", ] }\"; stream pos: ", istr.tellg()));
+			}
+		}
+
+		// member data
+
+		std::stack<value>		m_stack;
+		bool					m_is_empty_aggregate = false;
+		parsing_func_t			m_continuation_func = &parser::parse_value_start;
 	};
 }

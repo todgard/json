@@ -4,18 +4,18 @@
 #include <fstream>
 
 #include "parser.h"
-#include "pretty_printer.h"
+#include "printer.h"
 #include "value.h"
 
 using namespace std;
 
 int main()
 {
+	/*
 	using value = tdg::json::value;
 	using array = tdg::json::array;
 	using object = tdg::json::object;
 
-	/*
 	tdg::json::pretty_printer<> p(std::cout);
 
 	value v{ "abc", 2.0, 3, true, nullptr, value{"abc", true, "xyz", value{1, 2, false}} };
@@ -62,7 +62,7 @@ int main()
 
 	auto parsed = json_parser.parse(f);
 	
-	//tdg::json::pretty_printer<std::scientific, 16>(std::cout).print(parsed);
+	tdg::json::printer<std::scientific, 16>(std::cout).print(parsed);
 
 	return 0;
 }

@@ -2,6 +2,20 @@
 
 #include <stdexcept>
 
+
+namespace tdg::eh
+{
+	template <typename... Ts>
+	inline std::string make_error_msg(Ts&&... args)
+	{
+		std::stringstream ss;
+
+		(ss << ... << args) << '\n';
+
+		return ss.str();
+	}
+}
+
 namespace tdg::json
 {
 	class duplicate_key_exception : public std::runtime_error

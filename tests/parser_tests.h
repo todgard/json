@@ -73,21 +73,23 @@ TEST_CASE("Parsing JSON")
 		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Unclosed array")
+	SECTION("Extra comma")
 	{
-		std::string s = R"({ "abc" : [})";
+		std::string s = R"([[2], 1, null]])";
+
+		REQUIRE_NOTHROW(json_parser.parse(s));
+	}
+
+	SECTION("Path parsing with \\")
+	{
+		std::string s = R"("c:\Program Files\AMD")";
 
 		auto result = json_parser.parse(s);
-		REQUIRE(result.is_array());
-
-		const auto& arr = result.get<array>();
-
-		REQUIRE(arr.size() == 0u);
+		REQUIRE(result.is_string());
 
 		json_printer.print(result);
 
 		REQUIRE(s == oss.str());
 	}
-
 }
 

@@ -16,6 +16,7 @@ project ("json")
 include_directories(./)
 # Add source to this project's executable.
 add_executable (json "json.cpp" "json.h" "value.h" "printer.h" "value_visitor.h" "pretty_printer.h" "parser.h")
+target_compile_options(json PRIVATE $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:CLANG>>: -Wall -Wextra -Werror> $<$<CXX_COMPILER_ID:MSVC>: /WX /W4>)
 
 # TODO: Add tests and install targets if needed.
 
@@ -31,6 +32,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(tests tests/test.cpp "pretty_printer.h" "tests/parser_tests.h" "tests/value_tests.h")
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+target_compile_options(tests PRIVATE $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:CLANG>>: -Wall -Wextra -Werror> $<$<CXX_COMPILER_ID:MSVC>: /WX /W4>)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 

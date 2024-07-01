@@ -37,7 +37,7 @@ namespace tdg::json
 
 		void visit(const std::string& s) const override
 		{
-			m_out << std::quoted(s);
+			m_out << '"' << s << '"';
 		}
 
 		void visit(int64_t sint) const override
@@ -95,7 +95,7 @@ namespace tdg::json
 					m_out << ',';
 				}
 
-				m_out << std::quoted(key) << ':';
+				m_out << '"' << key << '"' << ':';
 				val.accept(*this);
 
 				seen_first = true;
