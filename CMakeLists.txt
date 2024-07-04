@@ -30,7 +30,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(tests tests/test.cpp "pretty_printer.h" "tests/parser_tests.h" "tests/value_tests.h")
+add_executable(tests tests/test.cpp "pretty_printer.h" "tests/parser_tests.h" "tests/value_tests.h" "tests/negative_parser_tests.h")
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 target_compile_options(tests PRIVATE $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:CLANG>>: -Wall -Wextra -Werror> $<$<CXX_COMPILER_ID:MSVC>: /WX /W4>)
 

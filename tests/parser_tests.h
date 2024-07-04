@@ -73,14 +73,19 @@ TEST_CASE("Parsing JSON")
 		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Extra comma")
+	SECTION("Object with multiple items")
 	{
-		std::string s = R"([[2], 1, null]])";
+		std::string s = R"({"a":2,"b":5})";
 
-		REQUIRE_NOTHROW(json_parser.parse(s));
+		auto result = json_parser.parse(s);
+		REQUIRE(result.is_object());
+
+		json_printer.print(result);
+
+		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Path parsing with \\")
+	SECTION("Parsing string with \\")
 	{
 		std::string s = R"("c:\Program Files\AMD")";
 

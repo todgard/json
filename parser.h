@@ -15,12 +15,6 @@ namespace tdg::json
 	{
 		using parsing_func_t = void (parser::*)(std::istream&, char);
 
-		enum class FINALIZE_TYPE {
-			OBJECT,
-			ARRAY,
-			ITEM
-		};
-
 		enum : char {
 			OBJECT_START_BRACE			= '{',
 			OBJECT_END_BRACE			= '}',
@@ -61,6 +55,12 @@ namespace tdg::json
 					: throw invalid_json_exception("Unclosed array/object after parsing available data");
 			}
 
+			if (m_is_empty_aggregate)
+			{
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Closing brace for top ", m_stack.top().is_array() ? "array" : "object", " is missing."));
+			}
+
 			auto value = std::move(m_stack.top());
 
 			return value;
@@ -84,7 +84,7 @@ namespace tdg::json
 			m_stack.emplace(T());
 		}
 
-		void finalize(FINALIZE_TYPE type)
+		void finalize(const char end_char)
 		{
 			/*
 			* When finalizing non-empty array or array item, the expected stack layout is:		root_value -> ... -> array -> current_value
@@ -99,36 +99,54 @@ namespace tdg::json
 
 			//TODO: fix error handling for situation when the stack becomes empty here (basically extra ] or } characters)
 			// maybe three separate methods for item, array and object to simplify logic
-			assert(!m_stack.empty());
+
+			auto finalize_failure = [end_char]() {
+                throw invalid_json_exception(
+					tdg::eh::make_error_msg("Found unexpected character: '", end_char, '\''));
+				};
+
+			if (m_stack.empty())
+			{
+				finalize_failure();
+			}
 
 			if (m_stack.top().is_array())
 			{
-				if (type == FINALIZE_TYPE::OBJECT)
+				if (end_char == OBJECT_END_BRACE)
 				{
-					throw invalid_json_exception("Found unexpected object-closing character '}'");
+					finalize_failure();
 				}
 
 				m_stack.top().get<array>().emplace_back(std::move(current_value));
 			}
 			else if (m_stack.top().is_string())
 			{
-				if (type == FINALIZE_TYPE::ARRAY)
+				if (end_char == ARRAY_END_BRACE)
 				{
-					throw invalid_json_exception("Found unexpected array-closing character ']'");
+					finalize_failure();
 				}
 
 				auto key_value = std::move(m_stack.top());
 
 				m_stack.pop();
 
+                if (m_stack.empty())
+                {
+                    finalize_failure();
+                }
+
 				auto& parent_object = m_stack.top();
 
 				if (!m_stack.top().is_object())
 				{
-					throw invalid_json_exception("Unable to finalize object");
+					finalize_failure();
 				}
 
 				parent_object[std::move(key_value.get<std::string>())] = std::move(current_value);
+			}
+			else
+			{
+				finalize_failure();
 			}
 		}
 
@@ -156,7 +174,8 @@ namespace tdg::json
 			}
 			else
 			{
-				throw invalid_json_exception(tdg::eh::make_error_msg("Unexpected start character for JSON scalar; stream pos: ", istr.tellg()));
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Unexpected start character '", current_char, "' for JSON value; stream pos : ", istr.tellg()));
 			}
 		}
 
@@ -181,7 +200,11 @@ namespace tdg::json
 				else if (std::iscntrl(current_char))
 				{
 					throw invalid_json_exception(
-						tdg::eh::make_error_msg("Control characters are not allowed in JSON string, possibly missing closing quote; stream pos: ", istr.tellg()));
+						tdg::eh::make_error_msg(
+							"Unexpected control character: ",
+							static_cast<unsigned>(current_char),
+							" inside JSON string, possibly missing closing quote; stream pos : ",
+							istr.tellg()));
 				}
 				else
 				{
@@ -222,7 +245,8 @@ namespace tdg::json
 			}
 			else
 			{
-				throw invalid_json_exception(tdg::eh::make_error_msg("Expected 'true' literal", istr.tellg()));
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Expected 'true' literal, retrieved 't", arr, "'; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -238,7 +262,8 @@ namespace tdg::json
 			}
 			else
 			{
-				throw invalid_json_exception(tdg::eh::make_error_msg("Expected 'false' literal", istr.tellg()));
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Expected 'false' literal, retrieved 'f", arr, "'; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -254,7 +279,8 @@ namespace tdg::json
 			}
 			else
 			{
-				throw invalid_json_exception(tdg::eh::make_error_msg("Expected 'null' literal", istr.tellg()));
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Expected 'null' literal, retrieved 'n", arr, "'; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -350,10 +376,10 @@ namespace tdg::json
 		{
 			if (current_char == QUOTE)
 			{
-				parse_scalar(istr, current_char);
+				push_string(istr);
 
 				m_is_empty_aggregate = false;
-				m_continuation_func = &parser::parse_value_end;
+				m_continuation_func = &parser::parse_key_value_separator;
 			}
 			else if (current_char == OBJECT_END_BRACE)
 			{
@@ -363,6 +389,19 @@ namespace tdg::json
 			{
 				throw invalid_json_exception(
 					tdg::eh::make_error_msg("Invalid character '", current_char, "' after JSON object starting brace; stream pos: ", istr.tellg()));
+			}
+		}
+
+		void parse_key_value_separator(std::istream& istr, char current_char)
+		{
+			if (current_char == KEY_VALUE_SEPARATOR)
+			{
+				m_continuation_func = &parser::parse_value_start;
+			}
+			else
+			{
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Invalid character '", current_char, "' after JSON object key, ':' expected; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -384,19 +423,17 @@ namespace tdg::json
 		{
 			if (current_char == COMMA)
 			{
-				finalize(FINALIZE_TYPE::ITEM);
+				finalize(current_char);
 
-				m_continuation_func = &parser::parse_value_start;
-			}
-			else if (current_char == KEY_VALUE_SEPARATOR)
-			{
-				m_continuation_func = &parser::parse_value_start;
+				m_continuation_func = m_stack.top().is_object()
+					? &parser::parse_object_key_or_end
+                    : &parser::parse_value_start;
 			}
 			else if (current_char == OBJECT_END_BRACE || current_char == ARRAY_END_BRACE)
 			{
 				if (!m_is_empty_aggregate)
 				{
-					finalize(current_char == OBJECT_END_BRACE ? FINALIZE_TYPE::OBJECT : FINALIZE_TYPE::ARRAY);
+					finalize(current_char);
 				}
 
                 m_is_empty_aggregate = false;
