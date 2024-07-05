@@ -97,9 +97,6 @@ namespace tdg::json
 
 			m_stack.pop();
 
-			//TODO: fix error handling for situation when the stack becomes empty here (basically extra ] or } characters)
-			// maybe three separate methods for item, array and object to simplify logic
-
 			auto finalize_failure = [end_char]() {
                 throw invalid_json_exception(
 					tdg::eh::make_error_msg("Found unexpected character: '", end_char, '\''));
@@ -310,6 +307,12 @@ namespace tdg::json
 					
 					if (current_char == '.')
 					{
+						if (is_float)
+						{
+                            throw invalid_json_exception(
+                                tdg::eh::make_error_msg("Multiple '.' fraction characters found while parsing a number", "; stream pos: ", istr.tellg()));
+						}
+
 						is_float = true;
 						is_unsigned_int = false;
 					}
@@ -321,7 +324,14 @@ namespace tdg::json
 				}
 			}
 
-			if (istr)
+			if ((buffer[0] == '0' && buffer.size() > 1) ||
+                (buffer[0] == '-' && (buffer.size() == 1 || buffer[1] == '0')))
+			{
+				throw invalid_json_exception(
+					tdg::eh::make_error_msg("Numerical value cannot start with 0 or -0; stream pos: ", istr.tellg()));
+			}
+
+			if (istr || istr.eof())
 			{
 				std::size_t pos = 0;
 

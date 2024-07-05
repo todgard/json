@@ -132,3 +132,48 @@ TEST_CASE("Object errors", "[negative parser tests]")
     REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::invalid_json_exception);
 }
 
+TEST_CASE("Scalar errors", "[negative parser tests]")
+{
+    using namespace tdg::json;
+
+    parser json_parser;
+
+    auto json_string = GENERATE(
+        R"(abc)",                   \
+        R"('abc')",                 \
+        R"("abc)",                  \
+        R"("abc')",                 \
+        R"(20")",                   \
+        R"(nul)",                   \
+        R"(tru)",                   \
+        R"(fals)",                  \
+        R"([2, nul])",              \
+        R"([2, nul)",               \
+        R"([2, tru])",              \
+        R"([2, tru)",               \
+        R"([2, fals])",             \
+        R"([2, fals)",              \
+        R"({"k": nul})",            \
+        R"({"k":, nul)",            \
+        R"({"k":, tru})",           \
+        R"({"k":, tru)",            \
+        R"({"k":, fals})",          \
+        R"("k":, fals)",            \
+        R"(3a)",                    \
+        R"(+5)",                    \
+        R"(00)",                    \
+        R"(09)",                    \
+        R"(-09)",                   \
+        R"(2,05)",                  \
+        R"(2.999-e2)",              \
+        R"(2.999+e2)",              \
+        R"(2.999-E2)",              \
+        R"(2.999+E2)",              \
+        R"(2.999e-2.3)",            \
+        R"(.999e-2)"                \
+    );
+
+    CAPTURE(json_string);
+
+    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::invalid_json_exception);
+}
