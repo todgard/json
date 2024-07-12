@@ -58,7 +58,7 @@ namespace tdg::json
 			if (m_is_empty_aggregate)
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Closing brace for top ", m_stack.top().is_array() ? "array" : "object", " is missing."));
+					MAKE_ERROR_MSG("Closing brace for top ", m_stack.top().is_array() ? "array" : "object", " is missing."));
 			}
 
 			auto value = std::move(m_stack.top());
@@ -99,7 +99,7 @@ namespace tdg::json
 
 			auto finalize_failure = [end_char]() {
                 throw invalid_json_exception(
-					tdg::eh::make_error_msg("Found unexpected character: '", end_char, '\''));
+					MAKE_ERROR_MSG("Found unexpected character: '", end_char, '\''));
 				};
 
 			if (m_stack.empty())
@@ -172,7 +172,7 @@ namespace tdg::json
 			else
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Unexpected start character '", current_char, "' for JSON value; stream pos : ", istr.tellg()));
+					MAKE_ERROR_MSG("Unexpected start character '", current_char, "' for JSON value; stream pos : ", istr.tellg()));
 			}
 		}
 
@@ -197,7 +197,7 @@ namespace tdg::json
 				else if (std::iscntrl(current_char))
 				{
 					throw invalid_json_exception(
-						tdg::eh::make_error_msg(
+						MAKE_ERROR_MSG(
 							"Unexpected control character: ",
 							static_cast<unsigned>(current_char),
 							" inside JSON string, possibly missing closing quote; stream pos : ",
@@ -215,7 +215,7 @@ namespace tdg::json
 
 			if (missing_closing_quote)
 			{
-				throw invalid_json_exception(tdg::eh::make_error_msg("Closing quote not found for JSON string", istr.tellg()));
+				throw invalid_json_exception(MAKE_ERROR_MSG("Closing quote not found for JSON string", istr.tellg()));
 			}
 
 			m_stack.emplace(std::move(parsed_string));
@@ -243,7 +243,7 @@ namespace tdg::json
 			else
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Expected 'true' literal, retrieved 't", arr, "'; stream pos: ", istr.tellg()));
+					MAKE_ERROR_MSG("Expected 'true' literal, retrieved 't", arr, "'; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -260,7 +260,7 @@ namespace tdg::json
 			else
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Expected 'false' literal, retrieved 'f", arr, "'; stream pos: ", istr.tellg()));
+					MAKE_ERROR_MSG("Expected 'false' literal, retrieved 'f", arr, "'; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -277,7 +277,7 @@ namespace tdg::json
 			else
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Expected 'null' literal, retrieved 'n", arr, "'; stream pos: ", istr.tellg()));
+					MAKE_ERROR_MSG("Expected 'null' literal, retrieved 'n", arr, "'; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -310,7 +310,7 @@ namespace tdg::json
 						if (is_float)
 						{
                             throw invalid_json_exception(
-                                tdg::eh::make_error_msg("Multiple '.' fraction characters found while parsing a number", "; stream pos: ", istr.tellg()));
+                                MAKE_ERROR_MSG("Multiple '.' fraction characters found while parsing a number", "; stream pos: ", istr.tellg()));
 						}
 
 						is_float = true;
@@ -328,7 +328,7 @@ namespace tdg::json
                 (buffer[0] == '-' && (buffer.size() == 1 || buffer[1] == '0')))
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Numerical value cannot start with 0 or -0; stream pos: ", istr.tellg()));
+					MAKE_ERROR_MSG("Numerical value cannot start with 0 or -0; stream pos: ", istr.tellg()));
 			}
 
 			if (istr || istr.eof())
@@ -351,13 +351,13 @@ namespace tdg::json
 				if (pos != buffer.size())
 				{
 					throw invalid_json_exception(
-						tdg::eh::make_error_msg("Invalid numerical value: ", buffer, "; stream pos: ", istr.tellg()));
+						MAKE_ERROR_MSG("Invalid numerical value: ", buffer, "; stream pos: ", istr.tellg()));
 				}
 			}
 			else
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Unexpected EOF or stream failure while reading a numerical value: ", buffer, "; stream pos: ", istr.tellg()));
+					MAKE_ERROR_MSG("Unexpected EOF or stream failure while reading a numerical value: ", buffer, "; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -398,7 +398,7 @@ namespace tdg::json
 			else
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Invalid character '", current_char, "' after JSON object starting brace; stream pos: ", istr.tellg()));
+					MAKE_ERROR_MSG("Invalid character '", current_char, "' after JSON object starting brace; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -411,7 +411,7 @@ namespace tdg::json
 			else
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Invalid character '", current_char, "' after JSON object key, ':' expected; stream pos: ", istr.tellg()));
+					MAKE_ERROR_MSG("Invalid character '", current_char, "' after JSON object key, ':' expected; stream pos: ", istr.tellg()));
 			}
 		}
 
@@ -452,7 +452,7 @@ namespace tdg::json
 			else
 			{
 				throw invalid_json_exception(
-					tdg::eh::make_error_msg("Unexpected character '", current_char, "' after a JSON value, expected one of \", ] }\"; stream pos: ", istr.tellg()));
+					MAKE_ERROR_MSG("Unexpected character '", current_char, "' after a JSON value, expected one of \", ] }\"; stream pos: ", istr.tellg()));
 			}
 		}
 

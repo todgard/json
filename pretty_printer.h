@@ -4,8 +4,7 @@
 #include <ostream>
 #include <string>
 
-#include "value.h"
-#include "value_visitor.h"
+#include "printer.h"
 
 
 namespace tdg::json
@@ -15,79 +14,34 @@ namespace tdg::json
 		std::size_t precision = 6u,
 		std::size_t tab_width = 3u
 		>
-	class pretty_printer : public value_visitor
+	class pretty_printer : public printer<float_format, precision>
 	{
 		static constexpr std::size_t INITIAL_FILLER_STRING_SIZE = 16u * tab_width;
 
+		using base_t = printer<float_format, precision>;
+
 	public:
-		explicit pretty_printer(std::ostream& oss) : m_out(oss) {}
-
-		void print(const value& start_value)
-		{
-			auto current_precision = m_out.precision();
-
-			if (current_precision != precision)
-			{
-				m_out << std::setprecision(precision);
-			}
-
-			start_value.accept(*this);
-
-			if (current_precision != precision)
-			{
-				m_out << std::setprecision(current_precision);
-			}
-		}
-
-		void visit(const std::string& s) const override
-		{
-			m_out << '"' << s << '"';
-		}
-
-		void visit(int64_t sint) const override
-		{
-			m_out << sint;
-		}
-
-		void visit(uint64_t uint) const override
-		{
-			m_out << uint;
-		}
-
-		void visit(double d) const override
-		{
-			m_out << float_format << d;
-		}
-
-		void visit(bool b) const override
-		{
-			m_out << (b ? "true" : "false");
-		}
-
-		void visit(nullptr_t) const override
-		{
-			m_out << "null";
-		}
+		explicit pretty_printer(std::ostream& oss) : base_t(oss) {}
 
 		void visit(const array& values) const override
 		{
 			if (values.empty())
 			{
-				m_out << "[]";
+				this->m_out << "[]";
 				return;
 			}
 
-			m_out << "[\n";
+			this->m_out << "[\n";
 			push_level();
 
 			for (auto seen_first = false; const auto & value : values)
 			{
 				if (seen_first)
 				{
-					m_out << ",\n";
+					this->m_out << ",\n";
 				}
 
-				m_out << indent();
+				this->m_out << indent();
 
 				value.accept(*this);
 
@@ -95,35 +49,35 @@ namespace tdg::json
 			}
 
 			pop_level();
-			m_out << '\n' << indent() << ']';
+			this->m_out << '\n' << indent() << ']';
 		}
 
 		void visit(const object& obj) const override
 		{
 			if (obj.empty())
 			{
-				m_out << "{}";
+				this->m_out << "{}";
 				return;
 			}
 
-			m_out << "{\n";
+			this->m_out << "{\n";
 			push_level();
 
 			for (auto seen_first = false; const auto & [key, val] : obj)
 			{
 				if (seen_first)
 				{
-					m_out << ",\n";
+					this->m_out << ",\n";
 				}
 
-				m_out << indent() << '"' << key  << "\" : ";
+				this->m_out << indent() << '"' << key  << "\" : ";
 				val.accept(*this);
 
 				seen_first = true;
 			}
 
 			pop_level();
-			m_out << '\n' << indent() << '}';
+			this->m_out << '\n' << indent() << '}';
 		}
 
 	private:
@@ -142,7 +96,6 @@ namespace tdg::json
 			return std::string_view(m_filler_string.data(), required_size);
 		}
 
-		std::ostream& m_out;
 		mutable std::size_t m_level = 0u;
 		mutable std::string m_filler_string = std::string(INITIAL_FILLER_STRING_SIZE, ' ');
 	};
@@ -154,3 +107,4 @@ namespace tdg::json
 		>
 	constexpr std::size_t INITIAL_FILLER_STRING_SIZE;
 }
+

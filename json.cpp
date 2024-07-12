@@ -4,7 +4,7 @@
 #include <fstream>
 
 #include "parser.h"
-#include "printer.h"
+#include "pretty_printer.h"
 #include "value.h"
 
 using namespace std;
@@ -62,7 +62,7 @@ int main()
 
 	auto parsed = json_parser.parse(f);
 	
-	tdg::json::printer<std::scientific, 16>(std::cout).print(parsed);
+	tdg::json::pretty_printer<std::scientific, 16, 4>(std::cout).print(parsed);
 
 	return 0;
 }

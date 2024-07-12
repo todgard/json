@@ -4,6 +4,7 @@
 #include <ostream>
 
 #include "value.h"
+#include "util.h"
 #include "value_visitor.h"
 
 
@@ -22,17 +23,11 @@ namespace tdg::json
 		{
 			auto current_precision = m_out.precision();
 
-			if (current_precision != precision)
-			{
-				m_out << std::setprecision(precision);
-			}
+            m_out << std::setprecision(precision);
+
+			ON_SCOPE_EXIT(m_out << std::setprecision(current_precision));
 
 			start_value.accept(*this);
-
-			if (current_precision != precision)
-			{
-				m_out << std::setprecision(current_precision);
-			}
 		}
 
 		void visit(const std::string& s) const override
@@ -104,7 +99,7 @@ namespace tdg::json
 			m_out << '}';
 		}
 
-	private:
+	protected:
 		std::ostream& m_out;
 	};
 }

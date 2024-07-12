@@ -1,15 +1,22 @@
 #pragma once
 
 #include <stdexcept>
+#include <source_location>
+
+#include "basic_macros.h"
 
 
 namespace tdg::eh
 {
 	template <typename... Ts>
-	inline std::string make_error_msg(Ts&&... args)
+	inline std::string make_error_msg(std::source_location location, Ts&&... args)
 	{
 		std::stringstream ss;
 
+		ss << "Exception in "
+            << location.file_name() << ':' << location.line()
+			<< " [" << location.function_name() << ']'
+			<< " - ";
 		(ss << ... << args) << '\n';
 
 		return ss.str();
@@ -18,23 +25,29 @@ namespace tdg::eh
 
 namespace tdg::json
 {
+	// Value exceptions
+
 	class duplicate_key_exception : public std::runtime_error
 	{
 	public:
-		explicit duplicate_key_exception(const std::string& msg) : std::runtime_error(msg) {}
+		using runtime_error::runtime_error;
 	};
 
 	class incompatible_assignment_exception : public std::runtime_error
 	{
 	public:
-		explicit incompatible_assignment_exception(const std::string& msg) : std::runtime_error(msg) {}
+		using runtime_error::runtime_error;
 	};
 
 	// Parsing exceptions
+
 	class invalid_json_exception : public std::runtime_error
 	{
 	public:
-		explicit invalid_json_exception(const std::string& msg) : std::runtime_error(msg) {}
+		using runtime_error::runtime_error;
 	};
 }
+
+#define MAKE_ERROR_MSG_IMPL(...) tdg::eh::make_error_msg(__VA_ARGS__)
+#define MAKE_ERROR_MSG(...) MAKE_ERROR_MSG_IMPL(std::source_location::current(), __VA_ARGS__)
 

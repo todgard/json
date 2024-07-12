@@ -212,7 +212,8 @@ namespace tdg::json
 		{
 			if (!is_null() && m_value.index() != other.m_value.index())
 			{
-				throw incompatible_assignment_exception("Call to value::set(const value&) requires new value to have the same type as the old one");
+				throw incompatible_assignment_exception(
+					MAKE_ERROR_MSG("Call to value::set(const value&) requires new value to have the same type as the old one"));
 			}
 
 			m_value = other.m_value;
@@ -222,22 +223,31 @@ namespace tdg::json
 		{
 			if (!is_null() && m_value.index() != other.m_value.index())
 			{
-				throw incompatible_assignment_exception("Call to value::set(const value&) requires new value to have the same type as the old one");
+				throw incompatible_assignment_exception(
+					MAKE_ERROR_MSG("Call to value::set(const value&) requires new value to have the same type as the old one"));
 			}
 
 			m_value = std::move(other.m_value);
 		}
 
-		template <typename T, typename... Ts>
-		static constexpr array make_array(T&& first, Ts&&... ts)
+		template <typename... Ts>
+		static constexpr array make_array(Ts&&... ts)
 		{
-			array arr;
-			arr.reserve(sizeof...(Ts) + 1);
-			arr.emplace_back(std::forward<T>(first));
+            array arr;
 
-			(arr.emplace_back(value(std::forward<Ts>(ts))), ...);
+			if constexpr (sizeof...(Ts) > 0)
+			{
+				arr.reserve(sizeof...(Ts));
 
-			return arr;
+				(arr.emplace_back(value(std::forward<Ts>(ts))), ...);
+			}
+
+            return arr;
+		}
+
+		static object make_object()
+		{
+			return object();
 		}
 
 	private:
@@ -261,7 +271,8 @@ namespace tdg::json
 		{
 			if (!obj.try_emplace(std::forward<K>(key), std::forward<V>(val)).second)
 			{
-				throw duplicate_key_exception("Duplicate key while trying to create json object");
+				throw duplicate_key_exception(
+					MAKE_ERROR_MSG("Duplicate key while trying to create json object"));
 			}
 
 			if constexpr (sizeof...(Ts) > 0)
