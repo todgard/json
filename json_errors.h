@@ -25,27 +25,24 @@ namespace tdg::eh
 
 namespace tdg::json
 {
-	// Value exceptions
-
-	class duplicate_key_exception : public std::runtime_error
-	{
-	public:
-		using runtime_error::runtime_error;
-	};
-
-	class incompatible_assignment_exception : public std::runtime_error
-	{
-	public:
-		using runtime_error::runtime_error;
-	};
-
-	// Parsing exceptions
-
 	class invalid_json_exception : public std::runtime_error
 	{
 	public:
 		using runtime_error::runtime_error;
 	};
+
+	class duplicate_key_exception : public invalid_json_exception
+	{
+	public:
+		using invalid_json_exception::invalid_json_exception;
+	};
+
+	class incompatible_assignment_exception : public invalid_json_exception
+	{
+	public:
+		using invalid_json_exception::invalid_json_exception;
+	};
+
 }
 
 #define MAKE_ERROR_MSG_IMPL(...) tdg::eh::make_error_msg(__VA_ARGS__)

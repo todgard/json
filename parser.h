@@ -139,7 +139,11 @@ namespace tdg::json
 					finalize_failure();
 				}
 
-				parent_object[std::move(key_value.get<std::string>())] = std::move(current_value);
+                if (!parent_object.get<object>().try_emplace(std::move(key_value.get<std::string>()), std::move(current_value)).second)
+                {
+                    throw duplicate_key_exception(
+                        MAKE_ERROR_MSG("Duplicate key '", key_value.get<std::string>(), "' while trying to create json object"));
+                }
 			}
 			else
 			{

@@ -124,7 +124,8 @@ TEST_CASE("Object errors", "[negative parser tests]")
         R"([{"abc" : [2, null}]])", \
         R"([{"abc" : 2]})",         \
         R"([{"abc" : 2])",          \
-        R"([{"abc" : 2], 2])"       \
+        R"([{"abc" : 2], 2])",      \
+        R"([{"abc": 2, "xyz": 3, "abc": 4}, 2])"
     );
 
     CAPTURE(json_string);

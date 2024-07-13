@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -272,7 +271,7 @@ namespace tdg::json
 			if (!obj.try_emplace(std::forward<K>(key), std::forward<V>(val)).second)
 			{
 				throw duplicate_key_exception(
-					MAKE_ERROR_MSG("Duplicate key while trying to create json object"));
+					MAKE_ERROR_MSG("Duplicate key '", key, "' while trying to create json object"));
 			}
 
 			if constexpr (sizeof...(Ts) > 0)
