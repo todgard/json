@@ -10,6 +10,10 @@
 
 namespace tdg::json
 {
+	//TODO: make it non-movable and non-copyable, make ctor protected so it cannot be created on heap
+	//consider also hiding this class by using stream wrapper and operator <<, so the printing operation
+	//is as simple as for example: std::cout << value;
+
 	template <
 		std::ios_base& float_format(std::ios_base&) = std::fixed,
 		std::size_t precision = 6u
@@ -19,7 +23,7 @@ namespace tdg::json
 	public:
 		explicit printer(std::ostream& oss) : m_out(oss) {}
 
-		void print(const value& start_value)
+		void print(const value& val)
 		{
 			auto current_precision = m_out.precision();
 
@@ -27,7 +31,7 @@ namespace tdg::json
 
 			ON_SCOPE_EXIT(m_out << std::setprecision(current_precision));
 
-			start_value.accept(*this);
+			val.accept(*this);
 		}
 
 		void visit(const std::string& s) const override

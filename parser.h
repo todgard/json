@@ -84,23 +84,24 @@ namespace tdg::json
 			m_stack.emplace(T());
 		}
 
-		void finalize(const char end_char)
+		void finalize(const char end_char, std::size_t stream_pos)
 		{
 			/*
 			* When finalizing non-empty array or array item, the expected stack layout is:		root_value -> ... -> array -> current_value
 			* After finalize current_value should be contained in array and stack should be:	root_value -> ... -> array
+			* 
 			* For object, the expected layout is:												root_value -> ... -> object -> key_value -> current_value
 			* After finalize object should contain {key_value, current_value} pair and stack:	root_value -> ... -> object
 			*/
 
+			auto finalize_failure = [end_char, stream_pos]() {
+                throw invalid_json_exception(
+					MAKE_ERROR_MSG("Found unexpected character: '", end_char, '\'', "; stream pos: ", stream_pos));
+				};
+
 			auto current_value = std::move(m_stack.top());
 
 			m_stack.pop();
-
-			auto finalize_failure = [end_char]() {
-                throw invalid_json_exception(
-					MAKE_ERROR_MSG("Found unexpected character: '", end_char, '\''));
-				};
 
 			if (m_stack.empty())
 			{
@@ -142,7 +143,7 @@ namespace tdg::json
                 if (!parent_object.get<object>().try_emplace(std::move(key_value.get<std::string>()), std::move(current_value)).second)
                 {
                     throw duplicate_key_exception(
-                        MAKE_ERROR_MSG("Duplicate key '", key_value.get<std::string>(), "' while trying to create json object"));
+                        MAKE_ERROR_MSG("Duplicate key '", key_value.get<std::string>(), "' while trying to create json object; stream pos: ", stream_pos));
                 }
 			}
 			else
@@ -287,9 +288,6 @@ namespace tdg::json
 
 		void push_number(std::istream& istr, char first_char)
 		{
-			//TODO: add handling of digit sequences starting with 0 and -0 cases
-			// and fix error handling
-
 			char current_char{};
 			auto is_float = false;
 			auto is_unsigned_int = (first_char != '-');
@@ -437,7 +435,7 @@ namespace tdg::json
 		{
 			if (current_char == COMMA)
 			{
-				finalize(current_char);
+				finalize(current_char, istr.tellg());
 
 				m_continuation_func = m_stack.top().is_object()
 					? &parser::parse_object_key_or_end
@@ -447,7 +445,7 @@ namespace tdg::json
 			{
 				if (!m_is_empty_aggregate)
 				{
-					finalize(current_char);
+					finalize(current_char, istr.tellg());
 				}
 
                 m_is_empty_aggregate = false;
