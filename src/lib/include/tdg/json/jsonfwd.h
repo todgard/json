@@ -5,7 +5,7 @@
 
 namespace tdg::json
 {
-	class value;
-	using array = std::vector<value>;
-	using object = std::map<std::string, value>;
+    class value;
+    using array = std::vector<value>;
+    using object = std::map<std::string, value>;
 }
