@@ -1,8 +1,9 @@
 #pragma once
 
 #include <catch2/catch_test_macros.hpp>
-#include "printer.h"
-#include "value.h"
+
+#include "tdg/json/printer.h"
+#include "tdg/json/value.h"
 
 
 using namespace tdg::json;

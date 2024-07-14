@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "jsonfwd.h"
+#include "tdg/json/jsonfwd.h"
 
 
 namespace tdg::json

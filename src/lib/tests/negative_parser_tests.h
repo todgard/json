@@ -3,8 +3,8 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "parser.h"
-#include "printer.h"
+#include "tdg/json/parser.h"
+#include "tdg/json/printer.h"
 
 
 TEST_CASE("Comma errors", "[negative parser tests]")

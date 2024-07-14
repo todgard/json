@@ -3,9 +3,10 @@
 #include <iomanip>
 #include <ostream>
 
-#include "value.h"
-#include "util.h"
-#include "value_visitor.h"
+#include "tdg/json/value.h"
+#include "tdg/json/value_visitor.h"
+
+#include "tdg/util/util.h"
 
 
 namespace tdg::json

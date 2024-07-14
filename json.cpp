@@ -3,9 +3,9 @@
 
 #include <fstream>
 
-#include "parser.h"
-#include "pretty_printer.h"
-#include "value.h"
+#include "tdg/json/parser.h"
+#include "tdg/json/pretty_printer.h"
+#include "tdg/json/value.h"
 
 using namespace std;
 

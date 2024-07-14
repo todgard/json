@@ -5,8 +5,8 @@
 #include <stack>
 #include <string>
 
-#include "json_errors.h"
-#include "value.h"
+#include "tdg/json/json_errors.h"
+#include "tdg/json/value.h"
 
 
 namespace tdg::json

@@ -11,9 +11,9 @@
 #include <variant>
 #include <vector>
 
-#include "json_errors.h"
-#include "jsonfwd.h"
-#include "value_visitor.h"
+#include "tdg/json/json_errors.h"
+#include "tdg/json/jsonfwd.h"
+#include "tdg/json/value_visitor.h"
 
 
 namespace tdg::json
