@@ -132,6 +132,11 @@ namespace tdg::json
             return m_value.index() == 6 && std::get<constant>(m_value) != constant::JSON_NULL;
         }
 
+        constexpr bool has_same_type(const value& other) const noexcept
+        {
+            return m_value.index() == other.m_value.index() && is_boolean() == other.is_boolean();
+        }
+
         //TODO: try changing visitor to non-const
         void accept(const value_visitor& visitor) const
         {
@@ -236,23 +241,25 @@ namespace tdg::json
             return std::get<T>(m_value);
         }
 
-        void set(const value& other)
+        void set(const value& other, const bool same_type_check = true)
         {
-            if (!is_null() && m_value.index() != other.m_value.index())
+            if (same_type_check && !has_same_type(other))
             {
                 throw incompatible_assignment_exception(
-                    MAKE_ERROR_MSG("Call to value::set(const value&) requires new value to have the same type as the old one"));
+                    MAKE_ERROR_MSG("Attempt to set new value has failed due to incompatible types, current type: ",
+                        get_type_string(*this), ", new type: ", get_type_string(other)));
             }
 
             m_value = other.m_value;
         }
 
-        void set(value&& other)
+        void set(value&& other, const bool same_type_check = true)
         {
-            if (!is_null() && m_value.index() != other.m_value.index())
+            if (same_type_check && !has_same_type(other))
             {
                 throw incompatible_assignment_exception(
-                    MAKE_ERROR_MSG("Call to value::set(const value&) requires new value to have the same type as the old one"));
+                    MAKE_ERROR_MSG("Attempt to set new value has failed due to incompatible types, current type: ",
+                        get_type_string(*this), ", new type: ", get_type_string(other)));
             }
 
             m_value = std::move(other.m_value);
@@ -307,6 +314,22 @@ namespace tdg::json
             {
                 make_object(obj, std::forward<Ts>(ts)...);
             }
+        }
+
+        static std::string_view get_type_string(const value& v)
+        {
+            static std::array<std::string_view, std::variant_size_v<internal_value_type>> type_names =
+            {
+                "object",
+                "array",
+                "string",
+                "unsigned int",
+                "signed int",
+                "double",
+                "boolean"
+            };
+
+            return v.is_null() ? "null" : type_names[v.m_value.index()];
         }
     };
 }

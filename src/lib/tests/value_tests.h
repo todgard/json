@@ -124,6 +124,7 @@ TEST_CASE("Simple array", "[value]")
         REQUIRE(arr.size() == 6u);
         arr.erase(arr.end() - 1, arr.end());
         REQUIRE(arr.size() == 5u);
+
         arr.emplace_back("uvw", true);
         REQUIRE(arr.size() == 6u);
         REQUIRE(v[5].is_object());
@@ -131,11 +132,23 @@ TEST_CASE("Simple array", "[value]")
         auto& obj = v[5].get<object>();
         REQUIRE(obj["uvw"].get<bool>());
         REQUIRE(obj.size() == 1u);
+
         obj["xyz"] = -1;
         REQUIRE(obj.size() == 2u);
+        REQUIRE(obj["xyz"].is_signed_integer());
+        REQUIRE(obj["xyz"].get<int64_t>() == -1);
+
+        obj.try_emplace("xyz", 3.0);
+        REQUIRE(obj.size() == 2u);
+        REQUIRE(obj["xyz"].is_signed_integer());
+
+        obj.insert_or_assign("xyz", 3.0);
+        REQUIRE(obj.size() == 2u);
+        REQUIRE(obj["xyz"].is_double());
+        REQUIRE(std::fabs(obj["xyz"].get<double>() - 3.0) < 0.001);
     }
 
-    SECTION("Setter function throws if different types", "[value]")
+    SECTION("Setter function throws by default if different types", "[value]")
     {
         REQUIRE_THROWS_AS(v[4].set("xyz"), incompatible_assignment_exception);
 
@@ -144,12 +157,59 @@ TEST_CASE("Simple array", "[value]")
         REQUIRE(v[0].get<std::string>() == "xyz");
     }
 
-    SECTION("Setter function does not throw if value is null", "[value]")
+    SECTION("Setter function can have same types check disabled", "[value]")
     {
         REQUIRE_NOTHROW(v[5].is_null());
-        REQUIRE_NOTHROW(v[5].set("xyz"));
+        REQUIRE_THROWS_AS(v[5].set(true), incompatible_assignment_exception);
+        REQUIRE_NOTHROW(v[5].set(true, false /* same_type_check */));
+        REQUIRE(v[5].get<bool>() == true);
+
+        REQUIRE_THROWS_AS(v[5].set(nullptr), incompatible_assignment_exception);
+        REQUIRE_NOTHROW(v[5].set(nullptr, false /* same_type_check */));
+        REQUIRE(v[5].is_null());
+
+        REQUIRE_THROWS_AS(v[5].set("xyz"), incompatible_assignment_exception);
+        REQUIRE_NOTHROW(v[5].set("xyz", false /* same_type_check */));
         REQUIRE(v[5].get<std::string>() == "xyz");
     }
+}
+
+TEST_CASE("Nested empty arrays", "[value]")
+{
+    value v{
+        value::make_array(
+            value::make_array(
+                value::make_array()))};
+
+    REQUIRE(v.is_array());
+    REQUIRE(v.get<array>().size() == 1u);
+    REQUIRE(v[0].is_array());
+    REQUIRE(v[0].get<array>().size() == 1u);
+    REQUIRE(v[0][0].is_array());
+    REQUIRE(v[0][0].get<array>().size() == 0u);
+
+    std::stringstream ss;
+    printer p(ss);
+    p.print(v);
+
+    REQUIRE(ss.str() == R"([[[]]])");
+}
+
+TEST_CASE("Collapsing values", "[value]")
+{
+    value v{
+        value(
+            value(
+                value::make_array()))};
+
+    REQUIRE(v.is_array());
+    REQUIRE(v.get<array>().size() == 0u);
+
+    std::stringstream ss;
+    printer p(ss);
+    p.print(v);
+
+    REQUIRE(ss.str() == R"([])");
 }
 
 TEST_CASE("Simple object", "[value]")
@@ -184,12 +244,10 @@ TEST_CASE("Creating object with duplicate keys should throw", "[value]")
 TEST_CASE("Big example 1", "[value]")
 {
     value v{
-        value(
-            value{"abc", 5, "uvw", value(1, 2, 3)},
-            value{"dsa", object()},
-            value::make_array(true),
-            value::make_array("abc", nullptr)
-            )
+        value{"abc", 5, "uvw", value(1, 2, 3)},
+        value{"dsa", object()},
+        value::make_array(true),
+        value::make_array("abc", nullptr)
     };
 
     std::stringstream ss;
@@ -249,4 +307,30 @@ TEST_CASE("Value from lvalues", "[value]")
     const auto& ri = i;
     v = value(ri);
     REQUIRE(v.is_signed_integer());
+}
+
+TEST_CASE("Assigning values creates deep copy", "[value]")
+{
+    value v{
+        value{"abc", 5, "uvw", value(1, 2, 3)},
+        value{"dsa", object()},
+        value::make_array(true),
+        value::make_array("abc", nullptr)
+    };
+
+    auto v2 = v;
+    v[0] = nullptr;
+    REQUIRE(v[0].is_null());
+    REQUIRE(v2[0].is_object());
+
+    std::stringstream ss;
+    printer p(ss);
+    p.print(v);
+
+    REQUIRE(ss.str() == R"([null,{"dsa":{}},[true],["abc",null]])");
+
+    ss.str("");
+    p.print(v2);
+
+    REQUIRE(ss.str() == R"([{"abc":5,"uvw":[1,2,3]},{"dsa":{}},[true],["abc",null]])");
 }
