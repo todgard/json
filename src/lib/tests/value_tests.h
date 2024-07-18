@@ -220,3 +220,33 @@ TEST_CASE("Big example 2", "[value]")
 
     REQUIRE(ss.str() == R"([[true,false,true,true],1234567890,null,{"adsf":[],"asdf":5,"ups":[5.60e-01,3.00e-11,1.70e+02,-8.99e-02]},[{"abc":5,"uvw":[1,2,3]},{"dsa":{}},[true],["abc",null]]])");
 }
+
+TEST_CASE("Value from lvalues", "[value]")
+{
+    using namespace std::string_literals;
+
+    auto s = "test"s;
+    auto i = -1;
+    auto u = 2u;
+    auto d = 0.5;
+    auto b = false;
+
+    value v(s);
+    REQUIRE(v.is_string());
+
+    v = i;
+    REQUIRE(v.is_signed_integer());
+
+    v = u;
+    REQUIRE(v.is_unsigned_integer());
+
+    v = d;
+    REQUIRE(v.is_double());
+
+    v = b;
+    REQUIRE(v.is_boolean());
+
+    const auto& ri = i;
+    v = value(ri);
+    REQUIRE(v.is_signed_integer());
+}

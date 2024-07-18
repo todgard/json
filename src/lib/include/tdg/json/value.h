@@ -70,6 +70,7 @@ namespace tdg::json
 
         explicit(false) value(object&& obj) : m_value(std::move(obj)) {}
         explicit(false) value(array&& arr) : m_value(std::move(arr)) {}
+        explicit(false) value(const std::string& s) : m_value(s) {}
         explicit(false) value(std::string&& s) : m_value(std::move(s)) {}
         explicit(false) value(const char* s) : m_value(std::string(s)) {}
         explicit(false) value(std::nullptr_t) {}
@@ -91,46 +92,47 @@ namespace tdg::json
             }
         }
 
-        constexpr bool is_object() const
+        constexpr bool is_object() const noexcept
         {
             return m_value.index() == 0;
         }
 
-        constexpr bool is_array() const
+        constexpr bool is_array() const noexcept
         {
             return m_value.index() == 1;
         }
 
-        constexpr bool is_string() const
+        constexpr bool is_string() const noexcept
         {
             return m_value.index() == 2;
         }
 
-        constexpr bool is_unsigned_integer() const
+        constexpr bool is_unsigned_integer() const noexcept
         {
             return m_value.index() == 3;
         }
 
-        constexpr bool is_signed_integer() const
+        constexpr bool is_signed_integer() const noexcept
         {
             return m_value.index() == 4;
         }
 
-        constexpr bool is_double() const
+        constexpr bool is_double() const noexcept
         {
             return m_value.index() == 5;
         }
 
-        constexpr bool is_null() const
+        constexpr bool is_null() const noexcept
         {
             return m_value.index() == 6 && std::get<constant>(m_value) == constant::JSON_NULL;
         }
 
-        constexpr bool is_boolean() const
+        constexpr bool is_boolean() const noexcept
         {
             return m_value.index() == 6 && std::get<constant>(m_value) != constant::JSON_NULL;
         }
 
+        //TODO: try changing visitor to non-const
         void accept(const value_visitor& visitor) const
         {
             std::visit(
@@ -151,6 +153,7 @@ namespace tdg::json
             );
         }
 
+        // Object elements insertion/access
         template <typename T>
         value& operator[](T&& key)
             requires std::is_same_v<std::decay_t<T>, std::string> ||
@@ -161,9 +164,20 @@ namespace tdg::json
 
         const value& operator[](const std::string& key) const
         {
+            return at(key);
+        }
+
+        value& at(const std::string& key)
+        {
             return std::get<object>(m_value).at(key);
         }
 
+        const value& at(const std::string& key) const
+        {
+            return std::get<object>(m_value).at(key);
+        }
+
+        // Array elements access
         value& operator[](std::size_t index)
         {
             return std::get<array>(m_value)[index];
@@ -174,6 +188,17 @@ namespace tdg::json
             return std::get<array>(m_value)[index];
         }
 
+        value& at(std::size_t index)
+        {
+            return std::get<array>(m_value).at(index);
+        }
+
+        const value& at(std::size_t index) const
+        {
+            return std::get<array>(m_value).at(index);
+        }
+
+        // Getter function, basically wrapper around std::get()
         template <typename T>
         T get() const
             requires std::is_same_v<uint64_t, T> || std::is_same_v<int64_t, T> || std::is_same_v<double, T> ||
@@ -181,7 +206,11 @@ namespace tdg::json
         {
             if constexpr (std::is_same_v<bool, T>)
             {
-                return std::get<constant>(m_value) == constant::JSON_TRUE;
+                const auto v = std::get<constant>(m_value);
+
+                return v == constant::JSON_NULL
+                    ? throw std::bad_variant_access()
+                    : v == constant::JSON_TRUE;
             }
             else if constexpr (std::is_same_v<std::nullptr_t, T>)
             {

@@ -58,6 +58,26 @@ TEST_CASE("Parsing JSON")
 		REQUIRE(s == oss.str());
 	}
 
+	SECTION("Nested empty array")
+	{
+		std::string s = R"([[[]]])";
+
+		auto result = json_parser.parse(s);
+		REQUIRE(result.is_array());
+
+		const auto& arr = result.get<array>();
+
+		REQUIRE(arr.size() == 1u);
+		REQUIRE(arr[0].is_array());
+		REQUIRE(arr[0].get<array>().size() == 1u);
+		REQUIRE(arr[0][0].is_array());
+		REQUIRE(arr[0][0].get<array>().size() == 0);
+
+		json_printer.print(result);
+
+		REQUIRE(s == oss.str());
+	}
+
 	SECTION("Empty object")
 	{
 		std::string s = R"({})";
@@ -65,9 +85,32 @@ TEST_CASE("Parsing JSON")
 		auto result = json_parser.parse(s);
 		REQUIRE(result.is_object());
 
-		const auto& arr = result.get<object>();
+		const auto& obj = result.get<object>();
 
-		REQUIRE(arr.size() == 0u);
+		REQUIRE(obj.size() == 0u);
+
+		json_printer.print(result);
+
+		REQUIRE(s == oss.str());
+	}
+
+	SECTION("Nested empty object")
+	{
+		std::string s = R"({"abc":{}})";
+
+		const auto result = json_parser.parse(s);
+		REQUIRE(result.is_object());
+
+		const auto& obj = result.get<object>();
+
+		REQUIRE(obj.size() == 1u);
+		REQUIRE(obj.at("abc").is_object());
+		REQUIRE(result["abc"].is_object());
+
+		REQUIRE_THROWS(result["xyz"]);
+
+		const auto& x = result["abc"];
+		REQUIRE(x.is_object());
 
 		json_printer.print(result);
 
