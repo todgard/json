@@ -41,3 +41,17 @@ namespace tdg::util
 #define ON_SCOPE_EXIT(body) \
 auto MAKE_UNIQUE_VAR(scope_exit_guard_) = tdg::util::on_scope_exit([&]() { body; })
 
+#define ON_SCOPE_EXIT_CAP1(cap1, body) \
+auto MAKE_UNIQUE_VAR(scope_exit_guard_) = tdg::util::on_scope_exit([cap1]() { body; })
+
+#define ON_SCOPE_EXIT_CAP2(cap1, cap2, body) \
+auto MAKE_UNIQUE_VAR(scope_exit_guard_) = tdg::util::on_scope_exit([cap1, cap2]() { body; })
+
+#define ON_SCOPE_EXIT_CAP3(cap1, cap2, cap3, body) \
+auto MAKE_UNIQUE_VAR(scope_exit_guard_) = tdg::util::on_scope_exit([cap1, cap2, cap3]() { body; })
+
+#define ON_SCOPE_EXIT_CAP4(cap1, cap2, cap3, cap4, body) \
+auto MAKE_UNIQUE_VAR(scope_exit_guard_) = tdg::util::on_scope_exit([cap1, cap2, cap3, cap4]() { body; })
+
+#define ON_SCOPE_EXIT_CAP5(cap1, cap2, cap3, cap4, cap5, body) \
+auto MAKE_UNIQUE_VAR(scope_exit_guard_) = tdg::util::on_scope_exit([cap1, cap2, cap3, cap4, cap5]() { body; })

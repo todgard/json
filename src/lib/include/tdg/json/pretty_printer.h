@@ -23,7 +23,7 @@ namespace tdg::json
     public:
         explicit pretty_printer(std::ostream& oss) : base_t(oss) {}
 
-        void visit(const array& values) const override
+        void visit(const array& values) override
         {
             if (values.empty())
             {
@@ -52,7 +52,7 @@ namespace tdg::json
             this->m_out << '\n' << indent() << ']';
         }
 
-        void visit(const object& obj) const override
+        void visit(const object& obj) override
         {
             if (obj.empty())
             {
@@ -81,10 +81,10 @@ namespace tdg::json
         }
 
     private:
-        void push_level() const { ++m_level; }
-        void pop_level() const { --m_level; }
+        void push_level() { ++m_level; }
+        void pop_level() { --m_level; }
 
-        std::string_view indent() const
+        std::string_view indent()
         {
             const auto required_size = m_level * tab_width;
 
@@ -96,8 +96,8 @@ namespace tdg::json
             return std::string_view(m_filler_string.data(), required_size);
         }
 
-        mutable std::size_t m_level = 0u;
-        mutable std::string m_filler_string = std::string(INITIAL_FILLER_STRING_SIZE, ' ');
+        std::size_t m_level = 0u;
+        std::string m_filler_string = std::string(INITIAL_FILLER_STRING_SIZE, ' ');
     };
 
     template <

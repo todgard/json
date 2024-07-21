@@ -137,8 +137,7 @@ namespace tdg::json
             return m_value.index() == other.m_value.index() && is_boolean() == other.is_boolean();
         }
 
-        //TODO: try changing visitor to non-const
-        void accept(const value_visitor& visitor) const
+        void accept(value_visitor& visitor) const
         {
             std::visit(
                 [&visitor]<typename T>(const T& arg)

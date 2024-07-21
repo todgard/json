@@ -88,6 +88,9 @@ TEST_CASE("Array errors", "[negative parser tests]")
         R"([{"abc" : 2]})",         \
         R"([{"abc" : 2})",          \
         R"([{"abc"], 2]})"          \
+        R"(["abc")"                 \
+        R"(["abc])"                 \
+        R"([abc"])"                 \
         R"({"x" : [})",             \
         R"({"x" : ]})"              \
     );

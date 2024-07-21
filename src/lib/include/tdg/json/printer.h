@@ -30,42 +30,42 @@ namespace tdg::json
 
             m_out.precision(precision);
 
-            ON_SCOPE_EXIT(m_out.precision(current_precision));
+            ON_SCOPE_EXIT_CAP2(this, current_precision, m_out.precision(current_precision));
 
             val.accept(*this);
         }
 
-        void visit(const std::string& s) const override
+        void visit(const std::string& s) override
         {
             m_out << '"' << s << '"';
         }
 
-        void visit(int64_t si) const override
+        void visit(int64_t si) override
         {
             m_out << si;
         }
 
-        void visit(uint64_t ui) const override
+        void visit(uint64_t ui) override
         {
             m_out << ui;
         }
 
-        void visit(double d) const override
+        void visit(double d) override
         {
             m_out << float_format << d;
         }
         
-        void visit(bool b) const override
+        void visit(bool b) override
         {
             m_out << (b ? "true" : "false");
         }
 
-        void visit(nullptr_t) const override
+        void visit(nullptr_t) override
         {
             m_out << "null";
         }
 
-        void visit(const array& items) const override
+        void visit(const array& items) override
         {
             m_out << '[';
 
@@ -84,7 +84,7 @@ namespace tdg::json
             m_out << ']';
         }
 
-        void visit(const object& obj) const override
+        void visit(const object& obj) override
         {
             m_out << '{';
 

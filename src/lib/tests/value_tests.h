@@ -1,5 +1,7 @@
 #pragma once
 
+#include <math.h>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include "tdg/json/printer.h"
@@ -44,11 +46,11 @@ TEST_CASE("Zero size compound types creation", "[value]")
     REQUIRE(v1.is_array());
     REQUIRE(v1.get<array>().size() == 0u);
 
-    value v2{ object() };
+    value v2{object()};
     REQUIRE(v2.is_object());
     REQUIRE(v2.get<object>().size() == 0u);
 
-    value v3{ "" };
+    value v3{""};
     REQUIRE(v3.is_string());
     REQUIRE(v3.get<std::string>().empty());
 }
@@ -65,7 +67,7 @@ TEST_CASE("Single element array has to be created explicitly", "[value]")
     REQUIRE(v2.get<array>()[0].is_null());
 }
 
-TEST_CASE("Array of string key, value pair has to be created explicitly", "[value]")
+TEST_CASE("Two element array with string as first element has to be created explicitly", "[value]")
 {
     value v{"abc", 2};
     REQUIRE(!v.is_array());
