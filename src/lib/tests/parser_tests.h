@@ -14,9 +14,9 @@ TEST_CASE("Parsing JSON")
 	printer<std::scientific, 3> json_printer(oss);
 	parser json_parser;
 
-	SECTION("Parsing basic values")
+	SECTION("Parsing basic values", "[parser tests]")
 	{
-		std::string s = R"(["abcd",  12,  -8, 1.234e-03, true, false, null])";
+		std::string s = R"(["abcd",12,-8,1.234e-03,true,false,null])";
 
 		auto result = json_parser.parse(s);
 		REQUIRE(result.is_array());
@@ -34,15 +34,10 @@ TEST_CASE("Parsing JSON")
 
 		json_printer.print(result);
 
-		for (auto pos = s.find(' '); pos != std::string::npos; pos = s.find(' ', pos))
-		{
-			s.replace(pos, 1u, "");
-		}
-
 		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Empty array")
+	SECTION("Empty array", "[parser tests]")
 	{
 		std::string s = R"([])";
 
@@ -58,7 +53,7 @@ TEST_CASE("Parsing JSON")
 		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Nested empty array")
+	SECTION("Nested empty array", "[parser tests]")
 	{
 		std::string s = R"([[[]]])";
 
@@ -78,7 +73,7 @@ TEST_CASE("Parsing JSON")
 		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Empty object")
+	SECTION("Empty object", "[parser tests]")
 	{
 		std::string s = R"({})";
 
@@ -94,7 +89,7 @@ TEST_CASE("Parsing JSON")
 		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Nested empty object")
+	SECTION("Nested empty object", "[parser tests]")
 	{
 		std::string s = R"({"abc":{}})";
 
@@ -117,7 +112,7 @@ TEST_CASE("Parsing JSON")
 		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Object with multiple items")
+	SECTION("Object with multiple items", "[parser tests]")
 	{
 		std::string s = R"({"a":2,"b":5})";
 
@@ -129,7 +124,7 @@ TEST_CASE("Parsing JSON")
 		REQUIRE(s == oss.str());
 	}
 
-	SECTION("Parsing string with \\")
+	SECTION("Parsing string with \\", "[parser tests]")
 	{
 		std::string s = R"("c:\Program Files\AMD")";
 
@@ -142,3 +137,34 @@ TEST_CASE("Parsing JSON")
 	}
 }
 
+TEST_CASE("Parsing doubles", "[parser tests]")
+{
+    using namespace tdg::json;
+
+    parser json_parser;
+
+    auto json_string = GENERATE(
+        R"(0.00)",                  \
+        R"(2.05)",                  \
+        R"(2.999e2)",               \
+        R"(2.999e+2)",              \
+        R"(2.999e-2)",              \
+        R"(2.999E2)",               \
+        R"(2.999E+2)",              \
+        R"(2.999E-2)",              \
+        R"(0.999e-2)",              \
+        R"(-0.00)",                 \
+        R"(-2.05)",                 \
+        R"(-2.999e2)",              \
+        R"(-2.999e+2)",             \
+        R"(-2.999e-2)",             \
+        R"(-2.999E2)",              \
+        R"(-2.999E+2)",             \
+        R"(-2.999E-2)",             \
+        R"(-0.999e-2)"              \
+    );
+
+    CAPTURE(json_string);
+
+	REQUIRE_NOTHROW(json_parser.parse(json_string));
+}

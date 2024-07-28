@@ -16,14 +16,14 @@ namespace tdg::json
         using parsing_func_t = void (parser::*)(std::istream&, char);
 
         enum : char {
-            OBJECT_START_BRACE            = '{',
-            OBJECT_END_BRACE            = '}',
-            ARRAY_START_BRACE            = '[',
-            ARRAY_END_BRACE                = ']',
-            VALUE_SEPARATOR                = ',',
-            KEY_VALUE_SEPARATOR            = ':',
-            QUOTE                        = '"',
-            COMMA                        = ','
+            OBJECT_START_BRACE  = '{',
+            OBJECT_END_BRACE    = '}',
+            ARRAY_START_BRACE   = '[',
+            ARRAY_END_BRACE     = ']',
+            VALUE_SEPARATOR     = ',',
+            KEY_VALUE_SEPARATOR = ':',
+            QUOTE               = '"',
+            COMMA               = ','
         };
 
     public:
@@ -38,21 +38,33 @@ namespace tdg::json
         {
             char current_char;
 
-            while (m_continuation_func && istr.get(current_char))
+            try
             {
-                if (std::isspace(current_char))
+                while (m_continuation_func && istr.get(current_char))
                 {
-                    continue;
-                }
+                    if (std::isspace(current_char))
+                    {
+                        continue;
+                    }
 
-                (this->*m_continuation_func)(istr, current_char);
+                    (this->*m_continuation_func)(istr, current_char);
+                }
+            }
+            catch (const invalid_json_exception&)
+            {
+                throw;
+            }
+            catch (const std::exception& e)
+            {
+                throw invalid_json_exception(
+                    MAKE_ERROR_MSG("Unexpected exception while parsing JSON: ", e.what()));
             }
 
             if (m_stack.size() != 1u)
             {
                 m_stack.empty()
                     ? throw invalid_json_exception("Nothing to parse")
-                    : throw invalid_json_exception("Unclosed array/object after parsing available data");
+                    : throw invalid_json_exception("Multiple JSON values found after parsing, possibly unclosed top array/object");
             }
 
             if (m_is_empty_aggregate)
@@ -116,8 +128,11 @@ namespace tdg::json
                 }
 
                 m_stack.top().get<array>().emplace_back(std::move(current_value));
+
+                return;
             }
-            else if (m_stack.top().is_string())
+
+            if (m_stack.top().is_string())
             {
                 if (end_char == ARRAY_END_BRACE)
                 {
@@ -145,11 +160,11 @@ namespace tdg::json
                     throw duplicate_key_exception(
                         MAKE_ERROR_MSG("Duplicate key '", key_value.get<std::string>(), "' while trying to create json object; stream pos: ", stream_pos));
                 }
+
+                return;
             }
-            else
-            {
-                finalize_failure();
-            }
+
+            finalize_failure();
         }
 
         void parse_scalar(std::istream& istr, const char current_char)
@@ -181,6 +196,7 @@ namespace tdg::json
             }
         }
 
+        //TODO: add escaped chars validation
         void push_string(std::istream& istr)
         {
             char current_char{};
@@ -216,8 +232,6 @@ namespace tdg::json
                 parsed_string.push_back(current_char);
             }
 
-            //std::cout << "Last string: " << parsed_string << std::endl;
-
             if (missing_closing_quote)
             {
                 throw invalid_json_exception(MAKE_ERROR_MSG("Closing quote not found for JSON string", istr.tellg()));
@@ -231,7 +245,7 @@ namespace tdg::json
         {
             if (!istr.get(arr, CNUM))
             {
-                throw invalid_json_exception("Unexpected EOF or read failure while trying extract characters from stream");
+                throw invalid_json_exception("Unexpected EOF or read failure while trying extract", CNUM - 1, " characters from stream");
             }
         }
 
@@ -290,10 +304,10 @@ namespace tdg::json
         {
             char current_char{};
             auto is_float = false;
-            auto is_unsigned_int = (first_char != '-');
+            auto is_signed = (first_char == '-');
 
             std::string buffer;
-            buffer.reserve(16);
+            //buffer.reserve(16);
             buffer.push_back(first_char);
 
             while (istr.get(current_char))
@@ -307,16 +321,9 @@ namespace tdg::json
                 {
                     buffer.push_back(current_char);
                     
-                    if (current_char == '.')
+                    if (current_char == '.' || current_char == 'e' || current_char == 'E')
                     {
-                        if (is_float)
-                        {
-                            throw invalid_json_exception(
-                                MAKE_ERROR_MSG("Multiple '.' fraction characters found while parsing a number", "; stream pos: ", istr.tellg()));
-                        }
-
                         is_float = true;
-                        is_unsigned_int = false;
                     }
                 }
                 else
@@ -326,8 +333,9 @@ namespace tdg::json
                 }
             }
 
-            if ((buffer[0] == '0' && buffer.size() > 1) ||
-                (buffer[0] == '-' && (buffer.size() == 1 || buffer[1] == '0')))
+            if (auto buffer_view = std::string_view(buffer.data() + (is_signed ? 1u : 0u));
+                buffer_view.size() > 0 && !std::isdigit(buffer_view[0])
+                || buffer_view.size() > 1 && buffer_view[0] == '0' && std::isdigit(buffer_view[1]))
             {
                 throw invalid_json_exception(
                     MAKE_ERROR_MSG("Numerical value cannot start with 0 or -0; stream pos: ", istr.tellg()));
@@ -337,17 +345,19 @@ namespace tdg::json
             {
                 std::size_t pos = 0;
 
-                if (is_unsigned_int)
+                value number{};
+
+                if (is_float)
                 {
-                    m_stack.emplace(std::stoull(buffer, &pos));
+                    number = std::stod(buffer, &pos);
                 }
-                else if (is_float)
+                else if (is_signed)
                 {
-                    m_stack.emplace(std::stod(buffer, &pos));
+                    number = std::stoll(buffer, &pos);
                 }
                 else
                 {
-                    m_stack.emplace(std::stoll(buffer, &pos));
+                    number = std::stoull(buffer, &pos);
                 }
 
                 if (pos != buffer.size())
@@ -355,11 +365,13 @@ namespace tdg::json
                     throw invalid_json_exception(
                         MAKE_ERROR_MSG("Invalid numerical value: ", buffer, "; stream pos: ", istr.tellg()));
                 }
+
+                m_stack.emplace(std::move(number));
             }
             else
             {
                 throw invalid_json_exception(
-                    MAKE_ERROR_MSG("Unexpected EOF or stream failure while reading a numerical value: ", buffer, "; stream pos: ", istr.tellg()));
+                    MAKE_ERROR_MSG("Unexpected stream failure while reading a numerical value [", buffer, ']'));
             }
         }
 
