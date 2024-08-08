@@ -25,22 +25,30 @@ namespace tdg::eh
 
 namespace tdg::json
 {
-    class invalid_json_exception : public std::runtime_error
+    class json_exception
     {
     public:
-        using runtime_error::runtime_error;
+        explicit json_exception(const std::string& msg) : m_msg(msg) {}
+        explicit json_exception(const char* msg) : m_msg(msg) {}
+
+        virtual ~json_exception() = default;
+
+        virtual const char* what() const noexcept { return m_msg.data(); }
+
+    private:
+        std::string m_msg;
     };
 
-    class duplicate_key_exception : public invalid_json_exception
+    class duplicate_key_exception : public json_exception
     {
     public:
-        using invalid_json_exception::invalid_json_exception;
+        using json_exception::json_exception;
     };
 
-    class incompatible_assignment_exception : public invalid_json_exception
+    class incompatible_assignment_exception : public json_exception
     {
     public:
-        using invalid_json_exception::invalid_json_exception;
+        using json_exception::json_exception;
     };
 
 }

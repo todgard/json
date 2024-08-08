@@ -7,6 +7,8 @@
 #include "tdg/json/pretty_printer.h"
 #include "tdg/json/value.h"
 
+#include "json.h"
+
 using namespace std;
 
 int main()

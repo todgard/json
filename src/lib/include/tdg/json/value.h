@@ -208,17 +208,17 @@ namespace tdg::json
             requires std::is_same_v<uint64_t, T> || std::is_same_v<int64_t, T> || std::is_same_v<double, T> ||
                      std::is_same_v<bool, T> || std::is_same_v<std::nullptr_t, T>
         {
+            using enum constant;
+
             if constexpr (std::is_same_v<bool, T>)
             {
                 const auto v = std::get<constant>(m_value);
 
-                return v == constant::JSON_NULL
-                    ? throw std::bad_variant_access()
-                    : v == constant::JSON_TRUE;
+                return v == JSON_NULL ? throw std::bad_variant_access() : v == JSON_TRUE;
             }
             else if constexpr (std::is_same_v<std::nullptr_t, T>)
             {
-                return std::get<constant>(m_value) == constant::JSON_NULL ? nullptr : throw std::bad_variant_access();
+                return std::get<constant>(m_value) == JSON_NULL ? nullptr : throw std::bad_variant_access();
             }
             else
             {

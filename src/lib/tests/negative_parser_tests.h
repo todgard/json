@@ -32,7 +32,7 @@ TEST_CASE("Comma errors", "[negative parser tests]")
         R"([-3, -2],)"              \
     );
 
-    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::invalid_json_exception);
+    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::json_exception);
 }
 
 TEST_CASE("Key-value separator errors", "[negative parser tests]")
@@ -64,7 +64,7 @@ TEST_CASE("Key-value separator errors", "[negative parser tests]")
         R"([-3, -2]:)"              \
     );
 
-    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::invalid_json_exception);
+    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::json_exception);
 }
 
 TEST_CASE("Array errors", "[negative parser tests]")
@@ -98,7 +98,7 @@ TEST_CASE("Array errors", "[negative parser tests]")
 
     CAPTURE(json_string);
 
-    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::invalid_json_exception);
+    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::json_exception);
 }
 
 TEST_CASE("Object errors", "[negative parser tests]")
@@ -135,7 +135,7 @@ TEST_CASE("Object errors", "[negative parser tests]")
 
     CAPTURE(json_string);
 
-    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::invalid_json_exception);
+    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::json_exception);
 }
 
 TEST_CASE("Scalar errors", "[negative parser tests]")
@@ -197,5 +197,5 @@ TEST_CASE("Scalar errors", "[negative parser tests]")
 
     CAPTURE(json_string);
 
-    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::invalid_json_exception);
+    REQUIRE_THROWS_AS(json_parser.parse(json_string), tdg::json::json_exception);
 }
