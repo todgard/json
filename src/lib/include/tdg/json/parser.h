@@ -197,7 +197,6 @@ namespace tdg::json
             char current_char{};
             std::string parsed_string;
             auto is_escaped = false;
-            auto missing_closing_quote = true;
 
             while (istr.get(current_char))
             {
@@ -207,8 +206,8 @@ namespace tdg::json
                 }
                 else if (current_char == '"' && !is_escaped)
                 {
-                    missing_closing_quote = false;
-                    break;
+                    m_stack.emplace(std::move(parsed_string));
+                    return;
                 }
                 else if (std::iscntrl(current_char))
                 {
@@ -227,18 +226,13 @@ namespace tdg::json
                 parsed_string.push_back(current_char);
             }
 
-            if (missing_closing_quote)
-            {
-                throw json_exception(MAKE_ERROR_MSG("Closing quote not found for JSON string", istr.tellg()));
-            }
-
-            m_stack.emplace(std::move(parsed_string));
+            throw json_exception(MAKE_ERROR_MSG("Closing quote not found for JSON string", istr.tellg()));
         }
 
         template <std::size_t CNUM>
         void extract_characters(std::istream& istr, char(&arr)[CNUM])
         {
-            if (!istr.get(arr, CNUM))
+            if (!istr.get(arr, CNUM) || istr.gcount() < CNUM - 1)
             {
                 throw json_exception(
                     MAKE_ERROR_MSG("Unexpected EOF or read failure while trying extract", CNUM - 1, " characters from stream"));

@@ -21,7 +21,8 @@ namespace tdg::json
     namespace detail
     {
         template <std::size_t S, typename K, typename... Ts >
-        struct is_object_constructible : public std::integral_constant<bool, (std::is_constructible_v<std::string, K> || S % 2u == 1u) && is_object_constructible<S + 1, Ts...>::value >
+        struct is_object_constructible :
+            public std::integral_constant<bool, (std::is_constructible_v<std::string, K> || S % 2u == 1u) && is_object_constructible<S + 1, Ts...>::value >
         {
         };
 
@@ -65,7 +66,6 @@ namespace tdg::json
             {
                 m_value = make_array(std::forward<U>(first), std::forward<Ts>(rest)...);
             }
-
         }
 
         explicit(false) value(object&& obj) : m_value(std::move(obj)) {}

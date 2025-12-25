@@ -153,6 +153,12 @@ TEST_CASE("Scalar errors", "[negative parser tests]")
         R"(nul)",                   \
         R"(tru)",                   \
         R"(fals)",                  \
+        R"(nule)",                  \
+        R"(truu)",                  \
+        R"(fals0)",                 \
+        R"(nulle)",                 \
+        R"(true.)",                 \
+        R"(falses)",                \
         R"([2, nul])",              \
         R"([2, nul)",               \
         R"([2, tru])",              \
